@@ -1,0 +1,2925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Strike: Void Assault</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050510;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            aspect-ratio: 16 / 9;
+            pointer-events: none; 
+            display: none;
+        }
+        .hud-text {
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+            font-weight: bold;
+            font-size: 20px;
+            position: absolute;
+            margin: 15px;
+        }
+        #score-display { top: 0; right: 0; text-align: right; }
+        #wave-display { top: 0; left: 0; }
+        
+        #player-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .hud-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .hud-label {
+            color: #fff;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            width: 70px;
+            text-align: right;
+            text-shadow: 0 0 5px currentColor;
+        }
+        .bar-container {
+            width: 200px;
+            height: 20px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid;
+        }
+        .bar-fill {
+            width: 100%;
+            height: 100%;
+            transition: width 0.1s linear;
+        }
+        #health-container {
+            border-color: #ff0044;
+            box-shadow: 0 0 10px #ff0044;
+        }
+        #health-bar {
+            background: linear-gradient(90deg, #880000, #ff0044);
+        }
+        #chrono-container {
+            border-color: #00ffff;
+            box-shadow: 0 0 10px #00ffff;
+            transition: all 0.3s ease;
+        }
+        #chrono-bar {
+            background: linear-gradient(90deg, #0088ff, #00ffff);
+        }
+
+        #boss-health-container {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 25px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #ff0044;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 15px #ff0044;
+            display: none;
+        }
+        #boss-health-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #880000, #ff0044);
+            transition: width 0.1s;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 5, 20, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 10;
+        }
+        h1 {
+            font-size: 48px;
+            color: #fff;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 40px #0044ff;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        h2 {
+            font-size: 32px;
+            color: #ff0044;
+            text-shadow: 0 0 10px #ff0044, 0 0 20px #ff0000;
+        }
+        p { font-size: 18px; text-align: center; max-width: 80%; line-height: 1.5; color: #aaa; }
+        .highlight { color: #0ff; font-weight: bold; }
+        .btn {
+            margin-top: 15px;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-family: inherit;
+            font-weight: bold;
+            color: #050510;
+            background: #0ff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 0 15px #0ff;
+            transition: all 0.2s;
+            pointer-events: auto;
+        }
+        .btn:hover {
+            background: #fff;
+            box-shadow: 0 0 25px #fff, 0 0 10px #0ff;
+            transform: scale(1.05);
+        }
+
+        #boss-warning {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 50px;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000, 0 0 40px #ff0044;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            pointer-events: none;
+            animation: pulseWarning 0.5s infinite alternate;
+        }
+
+        @keyframes pulseWarning {
+            from { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+            to { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+        }
+
+        .trivia-modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 15, 30, 0.95);
+            border: 2px solid #0ff;
+            border-radius: 10px;
+            padding: 30px;
+            width: 80%;
+            max-width: 750px;
+            max-height: 90vh;
+            overflow-y: auto;
+            color: white;
+            text-align: center;
+            display: none;
+            z-index: 20;
+            box-shadow: 0 0 30px #0ff;
+            pointer-events: auto;
+        }
+        .trivia-modal::-webkit-scrollbar { width: 8px; }
+        .trivia-modal::-webkit-scrollbar-thumb { background: #0ff; border-radius: 4px; }
+        
+        .trivia-modal h3 {
+            color: #ff00ff;
+            margin-top: 0;
+            font-size: 28px;
+            text-shadow: 0 0 10px currentColor;
+            transition: all 0.3s;
+        }
+        .question-text { font-size: 22px; margin-bottom: 20px; }
+        .ans-btn {
+            display: block; width: 100%; padding: 12px; margin: 8px 0;
+            background: #050510; 
+            color: var(--btn-color, #0ff); 
+            border: 1px solid var(--btn-color, #0ff);
+            border-radius: 5px; font-size: 16px; cursor: pointer;
+            transition: all 0.2s; font-family: inherit; font-weight: bold;
+        }
+        .ans-btn:hover { 
+            background: var(--btn-color, #0ff); 
+            color: #000 !important; 
+            box-shadow: 0 0 15px var(--btn-color, #0ff); 
+        }
+        
+        .upgrade-btn {
+            display: inline-block; width: 30%; margin: 1%; padding: 15px 5px;
+            background: #050510; 
+            color: var(--btn-color, #0ff); 
+            border: 2px solid var(--btn-color, #0ff);
+            border-radius: 10px; cursor: pointer; font-weight: bold; font-family: inherit;
+        }
+        .upgrade-btn:hover { 
+            background: var(--btn-color, #0ff); 
+            color: #000; 
+            box-shadow: 0 0 15px var(--btn-color, #0ff); 
+        }
+        
+        .portrait-container {
+            width: 120px; height: 120px;
+            margin: 0 auto 15px auto;
+            border: 3px solid #ff00ff;
+            background: #110022;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px #ff00ff inset;
+        }
+        .portrait-alien {
+            width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 35% 40%, #ff00ff 5px, transparent 6px),
+                radial-gradient(circle at 65% 40%, #ff00ff 5px, transparent 6px),
+                polygon(50% 20%, 80% 80%, 50% 90%, 20% 80%);
+            background-color: #222;
+            clip-path: polygon(50% 10%, 90% 30%, 70% 90%, 50% 100%, 30% 90%, 10% 30%);
+            position: absolute; top: 10%; left: 0;
+            animation: floatPortrait 3s infinite ease-in-out;
+        }
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+        @keyframes floatPortrait {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px); }
+        }
+        
+        .comm-text {
+            color: #ffaa00; font-family: 'Courier New', Courier, monospace;
+            font-size: 18px; margin: 0 auto 15px auto; text-align: center;
+            border: 2px solid currentColor; 
+            background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px;
+            width: 100%; box-sizing: border-box; display: block; position: relative;
+        }
+        
+        .review-list {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .review-list li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+    
+    <div id="ui-layer">
+        <div id="wave-display" class="hud-text">SECTOR: 1 | WAVE: 1</div>
+        <div id="score-display" class="hud-text">SCORE: 0</div>
+        <div id="lives-display" class="hud-text" style="top: 0; left: 50%; transform: translateX(-50%);">LIVES: 5</div>
+        
+        <div id="player-hud">
+            <div class="hud-row">
+                <div class="hud-label" style="color: #00ffff;">CHRONO</div>
+                <div id="chrono-container" class="bar-container">
+                    <div id="chrono-bar" class="bar-fill"></div>
+                </div>
+            </div>
+            <div class="hud-row">
+                <div class="hud-label" style="color: #ff0044;">HP</div>
+                <div id="health-container" class="bar-container">
+                    <div id="health-bar" class="bar-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="boss-health-container">
+            <div id="boss-health-bar"></div>
+        </div>
+        
+        <div id="boss-warning">WARNING<br>BOSS DETECTED</div>
+    </div>
+
+    <div id="start-screen" class="overlay">
+        <h1>NEON STRIKE<br>VOID ASSAULT</h1>
+        <p><span class="highlight">TOUCH/MOUSE:</span> Drag ship to move.<br>
+        <span class="highlight">KEYBOARD:</span> WASD/Arrows. SHIFT to Dash (if unlocked). SPACE for Chrono-Shift.<br>
+        Dodge the <span class="highlight">danmaku</span> patterns.<br>Collect Power-ups:<br>
+        🛡️ <span style="color:gold">Gold</span> = Plasma Shield | ⚡ <span style="color:#ffaa00">Yellow</span> = Orbital Strike<br>
+        🚀 <span style="color:#ff3333">Red</span> = Missile Rain | 💚 <span style="color:#00ff00">Green</span> = Health Repair<br>
+        💙 <span style="color:#00aaff">Blue</span> = Extra Life | 🔮 <span style="color:#00ffff">Cyan</span> = Weapon Overdrive</p>
+        <button class="btn" id="start-btn">INITIATE LAUNCH</button>
+        <button class="btn" id="review-btn" style="background: #ff00ff; box-shadow: 0 0 15px #ff00ff; color: #fff;">MISSION BRIEFING (REVIEW)</button>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="trivia-modal" style="text-align: left;">
+        <h3 style="color:#0ff; text-align:center;">PHYSICS DATABANKS</h3>
+        <div style="height: 55vh; overflow-y: auto; padding-right: 15px; font-size: 16px; line-height: 1.6;">
+            <h4 style="color:#ffaa00;">1. Motion & Speed</h4>
+            <ul class="review-list">
+                <li><strong>Speed:</strong> How fast an object moves (Distance ÷ Time).</li>
+                <li><strong>Velocity:</strong> Speed WITH a specific direction (e.g., 50 m/s North).</li>
+                <li><strong>Acceleration:</strong> A change in velocity (speeding up, slowing down, or turning). Measured in m/s².</li>
+                <li><strong>Reference Point:</strong> A stationary object used to tell if something else is moving.</li>
+            </ul>
+            <h4 style="color:#ffaa00;">2. Forces & Friction</h4>
+            <ul class="review-list">
+                <li><strong>Force:</strong> A push or pull (measured in Newtons, N).</li>
+                <li><strong>Net Force:</strong> When forces are <em>balanced</em> (Net Force = 0), objects don't change motion. <em>Unbalanced</em> forces cause acceleration.</li>
+                <li><strong>Friction:</strong> A force opposing motion. Types include Static (not moving), Sliding, Rolling, and Fluid (air/water resistance).</li>
+            </ul>
+            <h4 style="color:#ffaa00;">3. Newton's 3 Laws of Motion</h4>
+            <ul class="review-list">
+                <li><strong>1st Law (Inertia):</strong> An object stays at rest or in motion unless a force acts on it. (More mass = more inertia).</li>
+                <li><strong>2nd Law (F = ma):</strong> Force equals Mass times Acceleration. (Heavier objects need more force to accelerate).</li>
+                <li><strong>3rd Law (Action/Reaction):</strong> For every action, there is an equal and opposite reaction force.</li>
+            </ul>
+            <h4 style="color:#ffaa00;">4. Energy & Work</h4>
+            <ul class="review-list">
+                <li><strong>Kinetic Energy:</strong> Energy of motion.</li>
+                <li><strong>Potential Energy:</strong> Stored energy (like a stretched rubber band or an object held high up).</li>
+                <li><strong>Work:</strong> Done when a force moves an object a certain distance (measured in Joules).</li>
+                <li><strong>Power:</strong> How fast work is done (measured in Watts).</li>
+            </ul>
+        </div>
+        <div style="text-align: center;">
+            <button class="ans-btn" onclick="closeReview()" style="--btn-color:#ff0044; margin-top:20px; display:inline-block; width:50%;">BACK TO MENU</button>
+        </div>
+    </div>
+
+    <div id="game-over-screen" class="overlay" style="display: none;">
+        <h2>MISSION FAILED</h2>
+        <p>Your ship was destroyed.</p>
+        <p>FINAL SCORE: <span id="final-score" class="highlight">0</span></p>
+        <button class="btn" id="restart-btn">RETRY SECTOR</button>
+    </div>
+
+    <div id="victory-screen" class="overlay" style="display: none;">
+        <h2 style="color:#0ff; text-shadow: 0 0 20px #0ff;">CAMPAIGN COMPLETE</h2>
+        <p>Overlord Xal'Koris and the Ascended Deity have been defeated.</p>
+        <p style="font-size: 16px; color: #aaa; max-width: 600px; margin: 15px 0;">
+            <strong>EPILOGUE:</strong> With Oblivion shattered, the chaotic forces warping the universe stabilized. 
+            The shattered belts reformed, the singularity collapsed into peaceful starlight, and the alien Vanguard retreated into the deep unknown. 
+            You stand alone in the void—not as a soldier, but as the eternal guardian of the cosmos.
+        </p>
+        <p>FINAL SCORE: <span id="victory-score" class="highlight">0</span></p>
+        <button class="btn" id="victory-btn">PLAY AGAIN</button>
+    </div>
+
+    <div id="question-modal" class="trivia-modal">
+        <h3 id="question-title">UPCOMING WAVE APPROACHING!</h3>
+        <p id="question-subtitle">Answer correctly for a boost!</p>
+        <div id="question-text" class="question-text">Question goes here?</div>
+        <div id="answers-container"></div>
+    </div>
+
+    <div id="boss-choice-modal" class="trivia-modal">
+        <h3 style="color:#ff0044; text-shadow: 0 0 15px #ff0044;">CRITICAL WARNING: BOSS SIGNATURE DETECTED</h3>
+        <p style="font-size: 18px; margin-bottom: 25px;">Orbital supply network in range. Initiate system hack for emergency refuel and tactical upgrades?</p>
+        <button class="ans-btn" onclick="startRefuelSequence()" style="--btn-color:#00ff00;">INITIATE HACK (ANSWER 3 QUESTIONS)</button>
+        <button class="ans-btn" onclick="skipToBoss()" style="--btn-color:#ff0044; margin-top: 20px;">BYPASS PROTOCOLS (ENGAGE IMMEDIATELY)</button>
+    </div>
+
+    <!-- Comm Link Modal -->
+    <div id="comm-link-modal" class="trivia-modal">
+        <h3 id="comm-title">QUANTUM COMM-LINK ESTABLISHED</h3>
+        <div class="portrait-container">
+            <div class="portrait-alien"></div>
+            <div class="scanlines"></div>
+        </div>
+        <div id="comm-dialogue" class="comm-text">"Incoming transmission..."</div>
+        
+        <div id="comm-options"></div>
+        
+        <div id="comm-continue" style="display:none;">
+            <button id="comm-continue-btn" class="btn" style="background:#ff00ff; color:#fff; box-shadow: 0 0 15px #ff00ff;">CONTINUE</button>
+        </div>
+    </div>
+
+    <div id="boss-reward-modal" class="trivia-modal">
+        <h3 style="color:#ffd700; text-shadow: 0 0 15px #ffd700;">SECTOR CLEARED! RARE ARTIFACT RECOVERED</h3>
+        <p style="font-size: 18px; margin-bottom: 25px;">The enemy commander dropped a unique tech core. Choose one to integrate:</p>
+        <div id="boss-reward-options"></div>
+    </div>
+
+    <div id="upgrade-modal" class="trivia-modal" style="max-width: 850px;">
+        <div id="upgrade-modal-content"></div>
+    </div>
+</div>
+
+<script>
+// --- DIALOGUE DATA STRUCTURES ---
+const preFightComm = {
+    1: {
+        title: "COMM-LINK: COMMANDER ARACHNIS", color: "#ff0044", bg: "#400",
+        intro: '"You have breached our outer perimeter, pilot. Turn back, or be crushed under my mechanized treads."',
+        options: {
+            aggressive: { label: '[Aggressive] "I\'m going to peel this metal spider like a grape!"', bossReply: '"Reckless organic! I will fold your ship into a cube!"', color: '#ff3333', titleSuffix: ' [ENRAGED]' },
+            scared: { label: '[Scared] "Giant spiders are always bad news! Can we talk about this?!"', bossReply: '"Hahaha! Your fear is palpable. This will be over quickly."', color: '#00ffff', titleSuffix: ' [SADISTIC]' },
+            cocky: { label: '[Cocky] "I’ve fought more threatening toasters in the breakroom."', bossReply: '"Your arrogance will be your tomb!"', color: '#ffd700', titleSuffix: ' [FORTIFIED]' },
+            disrespectful: { label: '[Disrespectful] "Bro spawned in just to get folded 😂"', bossReply: '"FOLDED?! I will delete your existence from the source code!"', color: '#ff00ff', titleSuffix: ' [NUCLEAR]' },
+            heroic: { label: '[Heroic] "I stand for those who cannot fight! Your reign ends here!"', bossReply: '"A brave soul... prepare for an honorable duel."', color: '#00ff00', titleSuffix: ' [HONORABLE]' }
+        }
+    },
+    2: {
+        title: "COMM-LINK: GENERAL VANE", color: "#ff8800", bg: "#420",
+        intro: '"A single fighter against my Dreadnought? Your bravery is outmatched only by your foolishness. Prepare for annihilation."',
+        options: {
+            aggressive: { label: '[Aggressive] "I\'ll blow this Dreadnought out of the sky, Vane!"', bossReply: '"You dare challenge the Vanguard? All batteries, fire at maximum rate!"', color: '#ff3333', titleSuffix: ' [ENRAGED]' },
+            scared: { label: '[Scared] "That ship is huge... I surrender! Please!"', bossReply: '"A logical reaction. I will ensure your demise is swift but devastating."', color: '#00ffff', titleSuffix: ' [SADISTIC]' },
+            cocky: { label: '[Cocky] "A big ship just means a bigger target for my cannons."', bossReply: '"We\'ll see how long your humor lasts against reinforced armor plating."', color: '#ffd700', titleSuffix: ' [FORTIFIED]' },
+            disrespectful: { label: '[Disrespectful] "Keep monologuing king, I’m timing how long until I ignore you. 🥱"', bossReply: '"IGNORING ME?! I will scream my victory through the static of your cockpit!"', color: '#ff00ff', titleSuffix: ' [NUCLEAR]' },
+            heroic: { label: '[Heroic] "Size is no substitute for spirit! For the freedom of every star!"', bossReply: '"Spirit won\'t stop a kinetic barrage, pilot. Let us see whose conviction is stronger."', color: '#00ff00', titleSuffix: ' [HONORABLE]' }
+        }
+    },
+    3: {
+        title: "COMM-LINK: OVERLORD XAL'KORIS", color: "#ff00ff", bg: "#202",
+        intro: '"I am Overlord Xal\'Koris. You have decimated my fleet, but your insignificant journey ends here. Witness true power."',
+        options: {
+            aggressive: { label: '[Aggressive] "Your tyranny ends today, Xal\'Koris. Face me!"', bossReply: '"Such primitive rage. We shall see if your weapons match your arrogance."', color: '#ff3333', titleSuffix: ' [ENRAGED]' },
+            scared: { label: '[Scared] "The Overlord... I can\'t win this. Have mercy!"', bossReply: '"Pathetic. You grovel like all the others. A coward\'s death awaits you."', color: '#00ffff', titleSuffix: ' [SADISTIC]' },
+            cocky: { label: '[Cocky] "So you\'re the final boss? Try not to bore me."', bossReply: '"Insolent insect. I will bolster my shields and crush you slowly."', color: '#ffd700', titleSuffix: ' [FORTIFIED]' },
+            disrespectful: { label: '[Disrespectful] "You really thought that was worth saying out loud. L 😂"', bossReply: '"AN \'L\'?! I will erase your timeline and ensure you were never even born!"', color: '#ff00ff', titleSuffix: ' [NUCLEAR]' },
+            heroic: { label: '[Heroic] "I carry the hopes of the entire galaxy! Your darkness will fall!"', bossReply: '"Then die as you lived—a hero of a forgotten age. Behold the Void!"', color: '#00ff00', titleSuffix: ' [HONORABLE]' }
+        }
+    },
+    4: {
+        title: "COMM-LINK: CRUSH-CORE AI", color: "#ffaa00", bg: "#320",
+        intro: '"UNAUTHORIZED ENTITY DETECTED IN ASTEROID BELT. COMMENCING GRAVITATIONAL CRUSH SEQUENCE."',
+        options: {
+            aggressive: { label: '[Aggressive] "I\'ll turn you into scrap metal!"', bossReply: '"THREAT LEVEL UPGRADED. OVERCLOCKING COMPACTORS."', color: '#ff3333', titleSuffix: ' [ENRAGED]' },
+            scared: { label: '[Scared] "So many rocks! Please don\'t crush me!"', bossReply: '"FEAR DETECTED. ALLOCATING EXTRA POWER TO WEAPONRY."', color: '#00ffff', titleSuffix: ' [SADISTIC]' },
+            cocky: { label: '[Cocky] "A mining laser? Cute toy."', bossReply: '"ARROGANCE DETECTED. REINFORCING HEAVY SHIELDING."', color: '#ffd700', titleSuffix: ' [FORTIFIED]' },
+            disrespectful: { label: '[Disrespectful] "Windows 95 acting tough today 💀"', bossReply: '"SYSTEM ERROR. RAGE PROTOCOL INITIATED. UNLEASHING ALL ASSETS."', color: '#ff00ff', titleSuffix: ' [NUCLEAR]' },
+            heroic: { label: '[Heroic] "I will break your grip on this sector!"', bossReply: '"NO ANOMALIES PERMITTED. DUEL PARAMETERS ACCEPTED."', color: '#00ff00', titleSuffix: ' [HONORABLE]' }
+        }
+    },
+    5: {
+        title: "COMM-LINK: THE VOID-REAPER", color: "#8a2be2", bg: "#102",
+        intro: '"You have reached the edge of the Singularity. There is no return. Only the abyss."',
+        options: {
+            aggressive: { label: '[Aggressive] "I will light up your abyss!"', bossReply: '"Your spark will be extinguished in the dark."', color: '#ff3333', titleSuffix: ' [ENRAGED]' },
+            scared: { label: '[Scared] "It\'s so dark... I can\'t see!"', bossReply: '"Let the shadows consume your weak mind."', color: '#00ffff', titleSuffix: ' [SADISTIC]' },
+            cocky: { label: '[Cocky] "Just another black hole. Let\'s go."', bossReply: '"Your ignorance will condense your hull into dust."', color: '#ffd700', titleSuffix: ' [FORTIFIED]' },
+            disrespectful: { label: '[Disrespectful] "Edgy much? Get a therapist bro 🙄"', bossReply: '"INSOLENT FLESH! I WILL TEAR YOUR ATOMS APART!"', color: '#ff00ff', titleSuffix: ' [NUCLEAR]' },
+            heroic: { label: '[Heroic] "Even in the darkest void, hope survives!"', bossReply: '"A brilliant light... Let us see it fade."', color: '#00ff00', titleSuffix: ' [HONORABLE]' }
+        }
+    },
+    6: {
+        title: "COMM-LINK: OBLIVION, THE DEITY", color: "#ffffff", bg: "#000",
+        intro: '"I AM THE END OF ALL EQUATIONS. I AM THE SILENCE AFTER THE BIG BANG. KNEEL, MORTAL."',
+        options: {
+            aggressive: { label: '[Aggressive] "I don\'t kneel to overgrown glow-sticks!"', bossReply: '"THEN YOU SHALL BURN IN MY HEAVENLY FIRE."', color: '#ff3333', titleSuffix: ' [ENRAGED]' },
+            scared: { label: '[Scared] "What... what are you?!"', bossReply: '"I AM YOUR INEVITABLE END."', color: '#00ffff', titleSuffix: ' [SADISTIC]' },
+            cocky: { label: '[Cocky] "I\'ve beaten 5 bosses. You\'re just #6."', bossReply: '"I AM NOT A MACHINE. I AM A GOD. WITNESS TRUE ETERNITY."', color: '#ffd700', titleSuffix: ' [FORTIFIED]' },
+            disrespectful: { label: '[Disrespectful] "Bro is yapping in all caps 😂 Quit stalling!"', bossReply: '"... YOU DARE? I WILL SHATTER REALITY ITSELF JUST TO ERASE YOU!"', color: '#ff00ff', titleSuffix: ' [NUCLEAR]' },
+            heroic: { label: '[Heroic] "As long as I draw breath, the universe is protected!"', bossReply: '"THEN I SHALL TAKE YOUR BREATH, CHAMPION OF DUST."', color: '#00ff00', titleSuffix: ' [HONORABLE]' }
+        }
+    }
+};
+
+const postFightComm = {
+    1: {
+        title: "COMM-LINK: COMMANDER ARACHNIS", color: "#ff0044", bg: "#400",
+        intro: '"Critical damage... systems failing. You may have defeated me, but the Vanguard will crush you."',
+        options: {
+            aggressive: { label: '[Aggressive] "Tell them to bring it on! I\'ll scrap them too!"', bossReply: '"Static..."', color: '#ff3333' },
+            scared: { label: '[Scared] "Oh no... there are more of you?!"', bossReply: '"Countless... *transmission lost*"', color: '#00ffff' },
+            cocky: { label: '[Cocky] "Yeah, yeah, whatever you say, bug."', bossReply: '"Insolent... *transmission lost*"', color: '#ffd700' },
+            disrespectful: { label: '[Disrespectful] "Skill issue. Rest in pieces. 💀"', bossReply: '"Does not... compute... *transmission lost*"', color: '#ff00ff' },
+            heroic: { label: '[Heroic] "The Vanguard will fall just as you did. Peace will be restored."', bossReply: '"Foolish... *transmission lost*"', color: '#00ff00' }
+        }
+    },
+    2: {
+        title: "COMM-LINK: GENERAL VANE", color: "#ff8800", bg: "#420",
+        intro: '"My dreadnought... falling? This is impossible... the Overlord will avenge me..."',
+        options: {
+            aggressive: { label: '[Aggressive] "The Overlord is next on my list!"', bossReply: '"You cannot stop him... *transmission lost*"', color: '#ff3333' },
+            scared: { label: '[Scared] "Please tell him I\'m sorry!"', bossReply: '"He knows no mercy... *transmission lost*"', color: '#00ffff' },
+            cocky: { label: '[Cocky] "Impossible? I just made it look easy."', bossReply: '"Arrogant worm... *transmission lost*"', color: '#ffd700' },
+            disrespectful: { label: '[Disrespectful] "Hold this L on your way out. 🤡"', bossReply: '"Curse your... dialect... *transmission lost*"', color: '#ff00ff' },
+            heroic: { label: '[Heroic] "Your reign of terror is over, General. Stand down."', bossReply: '"Never... *transmission lost*"', color: '#00ff00' }
+        }
+    },
+    3: {
+        title: "COMM-LINK: OVERLORD XAL'KORIS", color: "#ff00ff", bg: "#202",
+        intro: '"NO! I am the fabric of reality! I cannot be undone by a mere mortal!"',
+        options: {
+            aggressive: { label: '[Aggressive] "Reality just got a software update, Xal\'Koris. Goodbye."', bossReply: '"NOOOOO! *transmission lost*"', color: '#ff3333' },
+            scared: { label: '[Scared] "Just please don\'t explode near me! I\'m leaving!"', bossReply: '"I will drag you to the void! *transmission lost*"', color: '#00ffff' },
+            cocky: { label: '[Cocky] "GG ez. Not even close."', bossReply: '"What is... GG... *transmission lost*"', color: '#ffd700' },
+            disrespectful: { label: '[Disrespectful] "Bro really got folded by a mortal. Actual NPC behavior. 😂"', bossReply: '"I AM NO NPC! *transmission lost*"', color: '#ff00ff' },
+            heroic: { label: '[Heroic] "The galaxy is finally free from your shadow. Rest in the void."', bossReply: '"The shadow... always returns... *transmission lost*"', color: '#00ff00' }
+        }
+    },
+    4: {
+        title: "COMM-LINK: CRUSH-CORE AI", color: "#ffaa00", bg: "#320",
+        intro: '"SYSTEM FAILURE. GRAVITY DRIVE COLLAPSING. ERROR... ERROR..."',
+        options: {
+            aggressive: { label: '[Aggressive] "Good riddance to bad junk!"', bossReply: '"... *transmission lost*"', color: '#ff3333' },
+            scared: { label: '[Scared] "It\'s exploding! Get me out of here!"', bossReply: '"... *transmission lost*"', color: '#00ffff' },
+            cocky: { label: '[Cocky] "Guess you couldn\'t handle the pressure."', bossReply: '"... *transmission lost*"', color: '#ffd700' },
+            disrespectful: { label: '[Disrespectful] "Ctrl+Alt+Del 💀"', bossReply: '"... *transmission lost*"', color: '#ff00ff' },
+            heroic: { label: '[Heroic] "Your automated terror ends here."', bossReply: '"... *transmission lost*"', color: '#00ff00' }
+        }
+    },
+    5: {
+        title: "COMM-LINK: THE VOID-REAPER", color: "#8a2be2", bg: "#102",
+        intro: '"The abyss... it calls to me... The true master awakens..."',
+        options: {
+            aggressive: { label: '[Aggressive] "Let him wake up! I\'ll destroy him too!"', bossReply: '"You cannot comprehend his power... *transmission lost*"', color: '#ff3333' },
+            scared: { label: '[Scared] "True master?! There\'s something WORSE?!"', bossReply: '"Oblivion comes... *transmission lost*"', color: '#00ffff' },
+            cocky: { label: '[Cocky] "Bring on the big boss. I\'m ready."', bossReply: '"Fool... *transmission lost*"', color: '#ffd700' },
+            disrespectful: { label: '[Disrespectful] "Always a bigger fish. Hold this L first though. 🤡"', bossReply: '"... *transmission lost*"', color: '#ff00ff' },
+            heroic: { label: '[Heroic] "I will face whatever darkness lies ahead!"', bossReply: '"Then you shall die... *transmission lost*"', color: '#00ff00' }
+        }
+    }
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+const uiLayer = document.getElementById('ui-layer');
+const scoreDisplay = document.getElementById('score-display');
+const waveDisplay = document.getElementById('wave-display');
+const healthBar = document.getElementById('health-bar');
+const bossHealthContainer = document.getElementById('boss-health-container');
+const bossHealthBar = document.getElementById('boss-health-bar');
+const bossWarning = document.getElementById('boss-warning');
+
+const startScreen = document.getElementById('start-screen');
+const gameOverScreen = document.getElementById('game-over-screen');
+const victoryScreen = document.getElementById('victory-screen');
+
+let gameState = 'START';
+let score = 0;
+let wave = 1;
+let sector = 1;
+const maxSectors = 6;
+let frameCount = 0;
+let rawFrameCount = 0; 
+let lastTime = 0;
+let lives = 5;
+
+let currentQuestionContext = ''; 
+let refuelQuestionsAsked = 0;
+let bossModifier = 'normal'; 
+let isPostFightComm = false;
+
+// Screen FX
+let screenShake = 0;
+let flashAlpha = 0;
+
+const MathUtils = {
+    rand: (min, max) => Math.random() * (max - min) + min,
+    distanceSq: (x1, y1, x2, y2) => {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        return dx * dx + dy * dy;
+    },
+    angle: (x1, y1, x2, y2) => Math.atan2(y2 - y1, x2 - x1),
+    clamp: (val, min, max) => Math.max(min, Math.min(max, val))
+};
+
+class Background {
+    constructor() {
+        this.stars = [];
+        this.craters = [];
+        this.lava = [];
+        this.bases = [];
+        for(let i=0; i<250; i++) {
+            this.stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2,
+                speed: Math.random() * 3 + 1
+            });
+        }
+        for(let i=0; i<12; i++) {
+            this.addCrater(Math.random() * canvas.height);
+            this.addLavaVein(Math.random() * canvas.height);
+            this.addBase(Math.random() * canvas.height);
+        }
+    }
+    addCrater(yStart) {
+        this.craters.push({ x: Math.random() * canvas.width, y: yStart || -100, r: MathUtils.rand(20, 80), speed: 1.5 });
+    }
+    addLavaVein(yStart) {
+        this.lava.push({ x: Math.random() * canvas.width, y: yStart || -200, width: MathUtils.rand(10, 40), height: MathUtils.rand(100, 300), speed: 1.2 });
+    }
+    addBase(yStart) {
+        this.bases.push({ x: MathUtils.rand(0, canvas.width - 100), y: yStart || -150, w: MathUtils.rand(60, 150), h: MathUtils.rand(80, 200), speed: 2 });
+    }
+    update() {
+        this.stars.forEach(s => {
+            s.y += s.speed;
+            if(s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
+        });
+        if (sector === 6) return; // No terrain in the Void
+        const updateTerrain = (arr, addFunc) => {
+            for(let i=arr.length-1; i>=0; i--) {
+                arr[i].y += arr[i].speed;
+                if(arr[i].y > canvas.height + 300) { arr.splice(i, 1); addFunc.call(this, -200); }
+            }
+        };
+        updateTerrain(this.craters, this.addCrater);
+        updateTerrain(this.lava, this.addLavaVein);
+        updateTerrain(this.bases, this.addBase);
+    }
+    draw(ctx) {
+        let bgColor = '#050510';
+        if (sector === 2) bgColor = '#100505'; 
+        if (sector === 3) bgColor = '#051010'; 
+        if (sector === 4) bgColor = '#1a1005'; 
+        if (sector === 5) bgColor = '#0a001a'; 
+        if (sector === 6) bgColor = '#000000'; // Pure void
+
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (sector < 6) {
+            ctx.save();
+            this.lava.forEach(l => {
+                let gradient = ctx.createLinearGradient(l.x, l.y, l.x + l.width, l.y);
+                let lavaColor = sector === 2 ? 'rgba(255, 100, 0, 0.3)' : 'rgba(255, 50, 0, 0.3)';
+                if (sector === 3) lavaColor = 'rgba(0, 255, 100, 0.3)';
+                if (sector === 4) lavaColor = 'rgba(255, 140, 0, 0.3)';
+                if (sector === 5) lavaColor = 'rgba(138, 43, 226, 0.3)';
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(0.5, lavaColor);
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = sector === 3 ? '#0f0' : (sector === 5 ? '#8a2be2' : '#ff3300');
+                ctx.beginPath();
+                ctx.moveTo(l.x, l.y);
+                ctx.bezierCurveTo(l.x + l.width/2, l.y + l.height/3, l.x - l.width/2, l.y + l.height*0.6, l.x, l.y + l.height);
+                ctx.lineTo(l.x + l.width, l.y + l.height);
+                ctx.bezierCurveTo(l.x + l.width*1.5, l.y + l.height*0.6, l.x + l.width/2, l.y + l.height/3, l.x + l.width, l.y);
+                ctx.fill();
+            });
+            ctx.restore();
+            ctx.save();
+            this.craters.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.r, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(20, 25, 40, 0.4)'; ctx.fill();
+                ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(30, 40, 60, 0.5)'; ctx.stroke();
+            });
+            ctx.restore();
+            ctx.save();
+            this.bases.forEach(b => {
+                ctx.fillStyle = 'rgba(40, 50, 70, 0.6)'; ctx.fillRect(b.x, b.y, b.w, b.h);
+                ctx.strokeStyle = sector === 3 ? '#ff00ff' : (sector === 5 ? '#8a2be2' : '#0ff'); ctx.lineWidth = 1; ctx.strokeRect(b.x, b.y, b.w, b.h);
+            });
+            ctx.restore();
+        }
+        
+        ctx.fillStyle = '#fff';
+        this.stars.forEach(s => {
+            ctx.globalAlpha = sector === 6 ? 0.3 : (Math.random() * 0.5 + 0.5);
+            ctx.fillRect(s.x, s.y, s.size, s.size);
+        });
+        ctx.globalAlpha = 1;
+    }
+}
+
+const bg = new Background();
+
+class Companion {
+    constructor(player) {
+        this.player = player;
+        this.x = canvas.width / 2;
+        this.y = canvas.height - 250;
+        this.radius = 8;
+        this.timer = 0;
+    }
+    update() {
+        this.timer++;
+        this.x = canvas.width / 2 + Math.sin(this.timer * 0.02) * (canvas.width / 2 - 100);
+        this.y = canvas.height - 250 + Math.sin(this.timer * 0.01) * 100;
+
+        let level = this.player.companionLevel;
+        let fireRate = Math.max(10, 40 - (level * 6));
+        
+        if (this.timer % fireRate === 0) {
+            let dmg = 10 * this.player.damageMultiplier;
+            bullets.push(new Bullet(this.x, this.y - 10, 0, -12, '#00ff00', true, dmg, 4));
+            if (level >= 3) {
+                bullets.push(new Bullet(this.x, this.y - 10, -3, -11, '#00ff00', true, dmg, 4));
+                bullets.push(new Bullet(this.x, this.y - 10, 3, -11, '#00ff00', true, dmg, 4));
+            }
+            if (level >= 5) {
+                bullets.push(new Bullet(this.x, this.y - 10, -6, -10, '#00ff00', true, dmg, 4));
+                bullets.push(new Bullet(this.x, this.y - 10, 6, -10, '#00ff00', true, dmg, 4));
+            }
+        }
+    }
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.fillStyle = '#00ff00';
+        ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(8, 5); ctx.lineTo(-8, 5); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+    }
+}
+
+const questionBank = [
+    { q: "What is the best definition of acceleration in physics?", options: ["How fast an object is moving", "The total distance an object travels", "The rate at which velocity changes over time", "The force of gravity on an object"], ans: 2 },
+    { q: "A car goes from 0 to 60 mph when entering a highway. This is an example of:", options: ["Positive acceleration", "Negative acceleration", "Zero acceleration", "Balanced forces"], ans: 0 },
+    { q: "A skateboarder is coming to a stop at a crosswalk. This is an example of:", options: ["Positive acceleration", "Deceleration (negative acceleration)", "Constant speed", "Constant velocity"], ans: 1 },
+    { q: "Which of the following scenarios is considered acceleration?", options: ["A car driving straight at a steady 50 mph", "A book resting on a desk", "A runner turning a corner at a constant speed", "A parked bicycle"], ans: 2 },
+    { q: "What is the standard scientific unit for measuring acceleration?", options: ["Meters per second (m/s)", "Meters per second squared (m/s²)", "Newtons (N)", "Miles per hour (mph)"], ans: 1 },
+    { q: "If a train is traveling at a constant speed of 80 mph in a straight line, what is its acceleration?", options: ["80 mph²", "It is continuously accelerating", "0", "8 mph²"], ans: 2 },
+    { q: "A cheetah accelerates from a resting position to 20 m/s in 4 seconds. What is its acceleration?", options: ["5 m/s²", "24 m/s²", "80 m/s²", "16 m/s²"], ans: 0 },
+    { q: "True or False: An object can accelerate even if its speed does not change.", options: ["True, by changing its mass", "True, by changing its direction", "False, acceleration only deals with speeding up", "False, acceleration only deals with slowing down"], ans: 1 },
+    { q: "When an apple falls from a tree, it speeds up as it drops. What causes this acceleration?", options: ["Air resistance", "Balanced forces", "Gravity", "Magnetic force"], ans: 2 },
+    { q: "If a spaceship is coasting through deep space in a straight line at a constant speed, its acceleration is:", options: ["Increasing", "Decreasing", "Zero", "9.8 m/s²"], ans: 2 },
+    { q: "Which vehicle is experiencing the greatest acceleration?", options: ["A truck driving 70 mph on a straight highway", "A sports car going from 0 to 60 mph in 3 seconds", "A bicycle coasting to a stop over 10 seconds", "A tractor moving at a steady 5 mph"], ans: 1 },
+    { q: "The formula for acceleration is: (Final Velocity - Initial Velocity) divided by...", options: ["Distance", "Mass", "Force", "Time"], ans: 3 },
+    { q: "On a distance-time graph, what does a flat, horizontal line indicate?", options: ["The object is returning to the start", "The object is moving at a steady speed", "The object is accelerating", "The object has stopped moving"], ans: 3 },
+    { q: "On a velocity-time graph, what does a flat, horizontal line indicate?", options: ["The object is returning to the start", "The object is moving at a constant speed", "The object is accelerating", "The object has stopped moving"], ans: 1 },
+    { q: "A steep diagonal line moving upward on a distance-time graph represents:", options: ["A slow constant speed", "A fast constant speed", "The object slowing down", "No motion"], ans: 1 },
+    { q: "On a distance-time graph, a line that curves upward (getting steeper) means the object is:", options: ["Stopping", "Going at a steady speed", "Accelerating (speeding up)", "Turning around"], ans: 2 },
+    { q: "On a velocity-time graph, a straight diagonal line going upward indicates:", options: ["Constant positive acceleration", "Constant distance", "Constant speed", "Deceleration"], ans: 0 },
+    { q: "The slope of a line on a distance-time graph tells you the object's:", options: ["Acceleration", "Speed/Velocity", "Mass", "Force"], ans: 1 },
+    { q: "The slope of a line on a velocity-time graph tells you the object's:", options: ["Acceleration", "Total distance", "Mass", "Friction"], ans: 0 },
+    { q: "On a distance-time graph, a line going downward toward the bottom x-axis means the object is:", options: ["Slowing down", "Speeding up", "Moving backward or returning to the starting point", "Sinking"], ans: 2 },
+    { q: "On a velocity-time graph, a line going downward toward the x-axis means the object is:", options: ["Returning to the start", "Slowing down (decelerating)", "Moving at a constant speed", "Stopping completely instantly"], ans: 1 },
+    { q: "If a distance-time graph shows a perfectly straight diagonal line, the object's acceleration is:", options: ["Positive", "Negative", "Zero", "Constantly changing"], ans: 2 },
+    { q: "Which graph would best represent a car stopped at a red light for 30 seconds?", options: ["A velocity-time graph with a steep upward line", "A distance-time graph with a flat, horizontal line", "A distance-time graph with a curved line", "A velocity-time graph with a flat line at 50 m/s"], ans: 1 },
+    { q: "A distance-time graph shows a gentle upward slope, followed by a very steep upward slope. What happened?", options: ["The object was moving slowly, then sped up", "The object was moving fast, then slowed down", "The object moved, then stopped", "The object moved forward, then went backward"], ans: 0 },
+    { q: "If an object is free-falling (ignoring air resistance), its velocity-time graph will look like:", options: ["A flat horizontal line", "A straight diagonal line going upward", "A curve that flattens out", "A straight diagonal line going downward"], ans: 1 },
+    { q: "In physics, a force is simply defined as:", options: ["The speed of an object", "The mass of an object", "A push or a pull", "The energy an object has"], ans: 2 },
+    { q: "When the net force acting on an object is exactly zero, the forces are considered:", options: ["Unbalanced", "Balanced", "Magnetic", "Gravitational"], ans: 1 },
+    { q: "Unbalanced forces will always cause an object to:", options: ["Stay perfectly still", "Maintain a constant speed", "Change its motion (accelerate)", "Lose mass"], ans: 2 },
+    { q: "A heavy book resting undisturbed on a desk is a primary example of:", options: ["Unbalanced forces", "Balanced forces", "Friction overcoming gravity", "Acceleration"], ans: 1 },
+    { q: "In a game of tug-of-war, Team A pulls with 100 N of force and Team B pulls with 100 N of force. What happens?", options: ["The rope moves toward Team A", "The rope moves toward Team B", "The rope snaps", "The rope does not move because the forces are balanced"], ans: 3 },
+    { q: "If Team A pulls left with 150 N and Team B pulls right with 100 N, what is the net force?", options: ["250 N left", "50 N left", "50 N right", "0 N"], ans: 1 },
+    { q: "Friction is a force that always acts in which direction?", options: ["The same direction as motion", "Downward toward the Earth", "The opposite direction of motion", "Upward toward the sky"], ans: 2 },
+    { q: "An asteroid moving through deep space at a constant speed in a straight line has what kind of forces acting on it?", options: ["Unbalanced forces", "Balanced forces (or zero net force)", "Extreme frictional forces", "High gravitational forces"], ans: 1 },
+    { q: "In order to make a resting shopping cart start moving forward, you must apply a(n):", options: ["Balanced force", "Unbalanced force", "Frictional force", "Equal and opposite force"], ans: 1 },
+    { q: "What is the standard metric unit used to measure force?", options: ["Kilogram", "Meter", "Joule", "Newton"], ans: 3 },
+    { q: "Gravity pulls down on a falling leaf, but air resistance pushes up. If the leaf falls at a constant speed, the forces are:", options: ["Balanced", "Unbalanced", "Zero", "Multiplying"], ans: 0 },
+    { q: "A kicked soccer ball eventually slows down and stops rolling across the grass because of:", options: ["The unbalanced force of friction", "The unbalanced force of gravity", "Balanced forces taking over", "The grass pushing it forward"], ans: 0 },
+    { q: "According to Newton's First Law, an object at rest stays at rest unless acted upon by a(n):", options: ["Balanced force", "Unbalanced force", "Heavy mass", "Magnetic field"], ans: 1 },
+    { q: "In a science experiment, the variable that the scientist purposefully changes or manipulates is the:", options: ["Dependent variable", "Independent variable", "Control variable", "Constant"], ans: 1 },
+    { q: "The variable that is measured, observed, or recorded as the 'result' of an experiment is the:", options: ["Dependent variable", "Independent variable", "Control variable", "Hypothesis"], ans: 0 },
+    { q: "Factors that are kept exactly the same throughout the entire experiment to ensure a fair test are called:", options: ["Dependent variables", "Independent variables", "Constants (Controlled variables)", "Anomalies"], ans: 2 },
+    { q: "Why is it important to have constants in an experiment?", options: ["So the experiment goes faster", "So you know exactly which variable caused the change in the results", "To give the scientist less work to do", "To make the data look better"], ans: 1 },
+    { q: "A student tests how the amount of sunlight affects plant growth. What is the independent variable?", options: ["The type of soil", "The height of the plant", "The amount of water", "The amount of sunlight"], ans: 3 },
+    { q: "In the same plant experiment, what is the dependent variable?", options: ["The type of soil", "The height/growth of the plant", "The amount of water", "The amount of sunlight"], ans: 1 },
+    { q: "Which of the following should be a constant in the plant experiment mentioned above?", options: ["The amount of sunlight", "The height of the plant at the end", "The amount of water given to each plant", "The data recorded on the chart"], ans: 2 },
+    { q: "A good scientific hypothesis is often written in an 'If / Then' format. The 'If' part usually describes the:", options: ["Dependent variable", "Independent variable", "Constant", "Conclusion"], ans: 1 },
+    { q: "A 'Control Group' in an experiment is:", options: ["The group that receives the extreme version of the test", "The group that does not receive the experimental treatment (used for comparison)", "The group of scientists watching the test", "The variables that are kept the same"], ans: 1 },
+    { q: "A student drops a bouncy ball from three different heights to see which drop makes the ball bounce highest. What is the independent variable?", options: ["The height the ball bounces", "The type of floor", "The height the ball is dropped from", "The type of bouncy ball"], ans: 2 },
+    { q: "What is the dependent variable in the bouncy ball experiment?", options: ["The height the ball bounces", "The type of floor", "The height the ball is dropped from", "The type of bouncy ball"], ans: 0 },
+    { q: "To make the bouncy ball experiment reliable and fair, what must remain a constant?", options: ["The height the ball is dropped from", "Using the exact same bouncy ball for every drop", "How high the ball bounces", "The person recording the data"], ans: 1 }
+];
+
+let availableQuestions = [];
+function getQuestion() {
+    if (availableQuestions.length === 0) {
+        availableQuestions = [...questionBank];
+        availableQuestions.sort(() => Math.random() - 0.5); 
+    }
+    return availableQuestions.pop();
+}
+
+let player;
+let bullets = [];
+let enemies = [];
+let particles = [];
+let powerups = [];
+let floatingTexts = [];
+let orbitalStrikes = [];
+
+const input = {
+    x: canvas.width / 2,
+    y: canvas.height - 100,
+    isDown: false,
+    keys: {},
+    usingKeyboard: false
+};
+
+function updateInputPos(e) {
+    input.usingKeyboard = false;
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    input.x = (clientX - rect.left) * scaleX;
+    input.y = (clientY - rect.top) * scaleY;
+}
+
+window.addEventListener('mousemove', (e) => { if(gameState === 'PLAYING') updateInputPos(e); });
+window.addEventListener('touchmove', (e) => { if(gameState === 'PLAYING') updateInputPos(e); }, {passive: false});
+window.addEventListener('mousedown', () => input.isDown = true);
+window.addEventListener('mouseup', () => input.isDown = false);
+window.addEventListener('touchstart', (e) => { input.isDown = true; if(gameState === 'PLAYING') updateInputPos(e); }, {passive: false});
+window.addEventListener('touchend', () => input.isDown = false);
+window.addEventListener('keydown', (e) => { 
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); 
+    
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+        if (gameState === 'PLAYING') {
+            gameState = 'PAUSED';
+        } else if (gameState === 'PAUSED') {
+            gameState = 'PLAYING';
+        }
+    }
+    
+    input.keys[e.code] = true; 
+    input.usingKeyboard = true; 
+});
+window.addEventListener('keyup', (e) => { input.keys[e.code] = false; });
+document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });
+
+function updateChronoUI() {
+    if (!player) return;
+    const container = document.getElementById('chrono-container');
+    const bar = document.getElementById('chrono-bar');
+    
+    if (player.chronoActive > 0) {
+        let maxActive = (3 + player.chronoLevel) * 60;
+        let pct = (player.chronoActive / maxActive) * 100;
+        bar.style.width = `${pct}%`;
+        bar.style.background = '#ffffff';
+        container.style.borderColor = '#ffffff';
+        container.style.boxShadow = '0 0 20px #ffffff';
+    } else if (player.chronoCooldown > 0) {
+        let pct = (1 - (player.chronoCooldown / player.chronoMaxCooldown)) * 100;
+        bar.style.width = `${pct}%`;
+        bar.style.background = 'linear-gradient(90deg, #0088ff, #00ffff)';
+        container.style.borderColor = '#00ffff';
+        container.style.boxShadow = '0 0 10px #00ffff';
+    } else {
+        bar.style.width = '100%';
+        bar.style.background = 'linear-gradient(90deg, #0088ff, #00ffff)';
+        container.style.borderColor = '#ffffff';
+        container.style.boxShadow = '0 0 20px #00ffff, 0 0 40px #00ffff';
+    }
+}
+
+document.getElementById('review-btn').addEventListener('click', () => {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('review-modal').style.display = 'block';
+});
+
+function closeReview() {
+    document.getElementById('review-modal').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'flex';
+}
+
+class OrbitalStrike {
+    constructor(x, tier, damageMod) {
+        this.x = x;
+        this.timer = 0;
+        this.tier = tier;
+        this.width = 30 + tier * 10;
+        this.damage = 50 * tier * damageMod;
+        this.markedForDeletion = false;
+    }
+    update() {
+        this.timer++;
+        if (this.timer === 30) {
+            screenShake = Math.max(screenShake, 5);
+            enemies.forEach(e => {
+                if (Math.abs(e.x - this.x) < this.width / 2 + e.radius && !e.isInvincible) {
+                    e.takeDamage(this.damage);
+                }
+            });
+            for(let i=0; i<15; i++) spawnParticle(this.x + MathUtils.rand(-this.width/2, this.width/2), MathUtils.rand(0, canvas.height), 0, MathUtils.rand(-5, 5), '#ffaa00', 30);
+        }
+        if (this.timer > 45) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        if (this.timer < 30) {
+            ctx.fillStyle = `rgba(255, 150, 0, ${this.timer / 100})`;
+            ctx.fillRect(this.x - this.width/2, 0, this.width, canvas.height);
+        } else {
+            let alpha = 1 - (this.timer - 30) / 15;
+            ctx.fillStyle = `rgba(255, 200, 0, ${alpha})`;
+            ctx.fillRect(this.x - this.width/2, 0, this.width, canvas.height);
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.fillRect(this.x - this.width/4, 0, this.width/2, canvas.height);
+        }
+        ctx.restore();
+    }
+}
+
+class Player {
+    constructor() {
+        this.x = canvas.width / 2;
+        this.y = canvas.height - 100;
+        this.radius = 12;
+        this.hp = 100;
+        this.maxHp = 100;
+        this.speed = 8;
+        this.fireRate = 10;
+        this.fireTimer = 0;
+        
+        this.weaponLevel = 1;
+        this.missileLevel = 0;
+        this.orbitalLevel = 0;
+        
+        this.chronoLevel = 1;
+        this.chronoActive = 0;
+        this.chronoCooldown = 0;
+        this.chronoMaxCooldown = 600; 
+        
+        this.companionUnlocked = false;
+        this.companionLevel = 1;
+        this.companion = null;
+        this.dashUnlocked = false;
+        this.dashCooldown = 0;
+        this.dashActive = 0; 
+        this.regenUnlocked = false;
+        this.vampireUnlocked = false;
+        this.magneticScoop = false;
+        this.damageMultiplier = 1.0;
+        
+        this.shieldActive = false;
+        this.shieldHp = 0;
+        this.activeBuffs = { orbital: 0, missile: 0, weapon: 0 };
+    }
+    update() {
+        if (input.usingKeyboard) {
+            if (input.keys['KeyW'] || input.keys['ArrowUp']) this.y -= this.speed;
+            if (input.keys['KeyS'] || input.keys['ArrowDown']) this.y += this.speed;
+            if (input.keys['KeyA'] || input.keys['ArrowLeft']) this.x -= this.speed;
+            if (input.keys['KeyD'] || input.keys['ArrowRight']) this.x += this.speed;
+            input.x = this.x; input.y = this.y;
+        } else {
+            const dx = input.x - this.x;
+            const dy = input.y - this.y;
+            this.x += dx * 0.35;
+            this.y += dy * 0.35;
+        }
+        
+        if (this.dashUnlocked) {
+            if (this.dashCooldown > 0) this.dashCooldown--;
+            if ((input.keys['ShiftLeft'] || input.keys['ShiftRight']) && this.dashCooldown <= 0) {
+                this.dashActive = 20;
+                this.dashCooldown = 300;
+                spawnFloatingText(this.x, this.y, "QUANTUM DASH!", '#0ff');
+            }
+        }
+        if (this.dashActive > 0) {
+            this.dashActive--;
+            this.y -= 8;
+            spawnParticle(this.x, this.y, 0, 0, '#00ffff', 10, 'glow');
+        }
+
+        if (sector === 5 && gameState === 'PLAYING') {
+            const angle = MathUtils.angle(this.x, this.y, canvas.width/2, canvas.height/2);
+            this.x += Math.cos(angle) * 1.5;
+            this.y += Math.sin(angle) * 1.5;
+        }
+
+        this.x = MathUtils.clamp(this.x, 20, canvas.width - 20);
+        this.y = MathUtils.clamp(this.y, 20, canvas.height - 20);
+        
+        if (this.regenUnlocked && frameCount % 60 === 0) {
+            if (this.hp < this.maxHp) { this.hp = Math.min(this.maxHp, this.hp + 2); updateHealthUI(); }
+        }
+
+        if (this.companionUnlocked && this.companion) this.companion.update();
+
+        this.fireTimer--;
+        if (this.fireTimer <= 0) { this.fire(); this.fireTimer = this.fireRate; }
+        if (this.missileLevel > 0 && frameCount % (120 - this.missileLevel * 20) === 0) this.fireMissiles(this.missileLevel);
+        if (this.orbitalLevel > 0 && frameCount % (150 - this.orbitalLevel * 20) === 0) this.fireOrbital(this.orbitalLevel);
+        
+        if (this.activeBuffs.orbital > 0) { this.activeBuffs.orbital--; if (frameCount % 30 === 0) this.fireOrbital(5); }
+        if (this.activeBuffs.missile > 0) { this.activeBuffs.missile--; if (frameCount % 30 === 0) this.fireMissiles(3); }
+        if (this.activeBuffs.weapon > 0) { this.activeBuffs.weapon--; }
+        
+        if (frameCount % 2 === 0) spawnParticle(this.x, this.y + 20, MathUtils.rand(-1, 1), MathUtils.rand(2, 5), '#00ffff', 15);
+    }
+    fire() {
+        const yOffset = this.y - 20; const speed = -15;
+        let dmg = 10 * this.damageMultiplier;
+        let effectiveLevel = (this.activeBuffs.weapon > 0) ? 5 : this.weaponLevel;
+        
+        if (effectiveLevel === 1) {
+            bullets.push(new Bullet(this.x - 10, yOffset, 0, speed, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x + 10, yOffset, 0, speed, '#00ffff', true, dmg));
+        } else if (effectiveLevel === 2) {
+            bullets.push(new Bullet(this.x, yOffset, 0, speed, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x - 12, yOffset, -3, speed * 0.9, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x + 12, yOffset, 3, speed * 0.9, '#00ffff', true, dmg));
+        } else if (effectiveLevel === 3) {
+            bullets.push(new Bullet(this.x, yOffset, 0, speed, '#00ffff', true, dmg + 2));
+            bullets.push(new Bullet(this.x - 15, yOffset, -4, speed * 0.9, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x + 15, yOffset, 4, speed * 0.9, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x - 25, yOffset, -8, speed * 0.8, '#00ffff', true, dmg - 2));
+            bullets.push(new Bullet(this.x + 25, yOffset, 8, speed * 0.8, '#00ffff', true, dmg - 2));
+        } else if (effectiveLevel === 4) {
+            bullets.push(new Bullet(this.x, yOffset, 0, speed, '#00ffff', true, dmg + 5));
+            bullets.push(new Bullet(this.x - 15, yOffset, -4, speed * 0.9, '#00ffff', true, dmg + 2));
+            bullets.push(new Bullet(this.x + 15, yOffset, 4, speed * 0.9, '#00ffff', true, dmg + 2));
+            bullets.push(new Bullet(this.x - 25, yOffset, -8, speed * 0.8, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x + 25, yOffset, 8, speed * 0.8, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x - 35, yOffset, -12, speed * 0.7, '#00ffff', true, dmg - 2));
+            bullets.push(new Bullet(this.x + 35, yOffset, 12, speed * 0.7, '#00ffff', true, dmg - 2));
+        } else {
+            bullets.push(new Bullet(this.x, yOffset, 0, speed, '#00ffff', true, dmg + 5));
+            bullets.push(new Bullet(this.x - 12, yOffset, -3, speed * 0.95, '#00ffff', true, dmg + 2));
+            bullets.push(new Bullet(this.x + 12, yOffset, 3, speed * 0.95, '#00ffff', true, dmg + 2));
+            bullets.push(new Bullet(this.x - 24, yOffset, -6, speed * 0.9, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x + 24, yOffset, 6, speed * 0.9, '#00ffff', true, dmg));
+            bullets.push(new Bullet(this.x - 36, yOffset, -9, speed * 0.8, '#00ffff', true, dmg - 2));
+            bullets.push(new Bullet(this.x + 36, yOffset, 9, speed * 0.8, '#00ffff', true, dmg - 2));
+            bullets.push(new Bullet(this.x - 48, yOffset, -12, speed * 0.7, '#00ffff', true, dmg - 2));
+            bullets.push(new Bullet(this.x + 48, yOffset, 12, speed * 0.7, '#00ffff', true, dmg - 2));
+        }
+    }
+    fireOrbital(tier = 1) {
+        if (enemies.length === 0) return;
+        let target = enemies[Math.floor(Math.random() * enemies.length)];
+        orbitalStrikes.push(new OrbitalStrike(target.x, tier, this.damageMultiplier));
+    }
+    fireMissiles(tier = 1) {
+        let color = '#ff3333';
+        bullets.push(new HomingMissile(this.x - 20, this.y, -4, -5, color));
+        bullets.push(new HomingMissile(this.x + 20, this.y, 4, -5, color));
+        if (tier > 1) {
+            bullets.push(new HomingMissile(this.x - 30, this.y, -6, -4, color));
+            bullets.push(new HomingMissile(this.x + 30, this.y, 6, -4, color));
+        }
+        if (tier > 2) {
+            bullets.push(new HomingMissile(this.x - 40, this.y, -8, -3, color));
+            bullets.push(new HomingMissile(this.x + 40, this.y, 8, -3, color));
+        }
+        if (tier > 3) {
+            bullets.push(new HomingMissile(this.x - 50, this.y, -10, -2, color));
+            bullets.push(new HomingMissile(this.x + 50, this.y, 10, -2, color));
+        }
+        if (tier > 4) {
+            bullets.push(new HomingMissile(this.x - 60, this.y, -12, -1, color));
+            bullets.push(new HomingMissile(this.x + 60, this.y, 12, -1, color));
+        }
+    }
+    takeDamage(amount) {
+        if (this.dashActive > 0) return;
+
+        if (this.shieldActive) {
+            this.shieldHp -= amount;
+            spawnParticle(this.x, this.y, 0, 0, 'gold', 30, 'ring');
+            if (this.shieldHp <= 0) { this.shieldActive = false; spawnFloatingText(this.x, this.y, "SHIELD BROKEN", 'gold'); }
+            return;
+        }
+        
+        this.hp -= amount; 
+        updateHealthUI();
+        
+        screenShake = Math.max(screenShake, 8);
+        flashAlpha = 0.3;
+        
+        if (this.hp <= 0) {
+            lives--;
+            document.getElementById('lives-display').innerText = `LIVES: ${lives}`;
+            if (lives > 0) { triggerQuestionModal('revive'); } 
+            else { triggerGameOver(); }
+        } else {
+            for(let i=0; i<10; i++) spawnParticle(this.x, this.y, MathUtils.rand(-5, 5), MathUtils.rand(-5, 5), '#ff0000', 20);
+        }
+    }
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.x, this.y);
+
+        if (this.dashActive > 0) { ctx.globalAlpha = 0.5; }
+        if (this.shieldActive) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                let angle = (Math.PI * 2 / 6) * i + (frameCount * 0.05);
+                ctx.lineTo(Math.cos(angle) * 35, Math.sin(angle) * 35);
+            }
+            ctx.closePath(); ctx.strokeStyle = `rgba(255, 215, 0, ${0.5 + Math.sin(frameCount*0.1)*0.2})`; ctx.lineWidth = 2; ctx.stroke();
+        }
+        ctx.shadowBlur = 10; ctx.shadowColor = '#0044ff';
+        
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(0, -25); ctx.lineTo(10, 15); ctx.lineTo(-10, 15); ctx.fill();
+        ctx.fillStyle = '#0044ff'; ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(25, 20); ctx.lineTo(10, 15); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-25, 20); ctx.lineTo(-10, 15); ctx.fill();
+        
+        ctx.shadowBlur = 15; ctx.shadowColor = '#ffffff';
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Bullet {
+    constructor(x, y, vx, vy, color, isPlayer, damage = 10, radius = 4) {
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.color = color;
+        this.isPlayer = isPlayer; this.damage = damage; this.radius = radius;
+        this.markedForDeletion = false;
+    }
+    update() {
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < -50 || this.x > canvas.width + 50 || this.y < -50 || this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 4, 0, Math.PI * 2);
+        ctx.fillStyle = this.color; ctx.globalAlpha = 0.4; ctx.fill();
+        ctx.restore();
+    }
+}
+
+class HomingMissile extends Bullet {
+    constructor(x, y, vx, vy, color) {
+        super(x, y, vx, vy, color, true, 25 * (player ? player.damageMultiplier : 1), 3);
+        this.target = null; this.life = 150;
+    }
+    update() {
+        super.update(); this.life--;
+        if(this.life <= 0) this.markedForDeletion = true;
+        if(frameCount % 2 === 0) spawnParticle(this.x, this.y, 0, 0, '#ff8800', 10);
+        if (!this.target || this.target.hp <= 0) {
+            let minDistSq = Infinity;
+            enemies.forEach(e => {
+                let dSq = MathUtils.distanceSq(this.x, this.y, e.x, e.y);
+                if (dSq < minDistSq) { minDistSq = dSq; this.target = e; }
+            });
+        }
+        if (this.target) {
+            let angle = MathUtils.angle(this.x, this.y, this.target.x, this.target.y);
+            this.vx += (Math.cos(angle) * 12 - this.vx) * 0.1;
+            this.vy += (Math.sin(angle) * 12 - this.vy) * 0.1;
+        }
+    }
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI/2);
+        ctx.fillStyle = this.color; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(4, 8); ctx.lineTo(-4, 8); ctx.fill(); ctx.restore();
+    }
+}
+
+class Enemy {
+    constructor(x, y, hp, radius, scoreValue) {
+        this.x = x; this.y = y; this.hp = hp; this.maxHp = hp; this.radius = radius; this.scoreValue = scoreValue;
+        this.markedForDeletion = false; this.timer = 0; this.hitTimer = 0;
+        this.isInvincible = false;
+    }
+    takeDamage(amount) {
+        if(this.isInvincible) return;
+        this.hp -= amount; this.hitTimer = 5;
+        spawnParticle(this.x, this.y + this.radius, MathUtils.rand(-2,2), MathUtils.rand(2,5), '#fff', 10);
+        if (this.hp <= 0) this.die();
+    }
+    die() {
+        this.markedForDeletion = true; score += this.scoreValue; scoreDisplay.innerText = `SCORE: ${score}`;
+        spawnFloatingText(this.x, this.y, `+${this.scoreValue}`, '#0ff');
+        createExplosion(this.x, this.y, this.radius * 2, this.getColor());
+        
+        if (player && player.vampireUnlocked && Math.random() < 0.3) {
+            player.hp = Math.min(player.maxHp, player.hp + 5);
+            updateHealthUI();
+            spawnFloatingText(player.x, player.y, "+HP", '#ff0000');
+        }
+    }
+    getColor() { return '#fff'; }
+    update() { this.timer++; if(this.hitTimer > 0) this.hitTimer--; }
+    draw(ctx) {
+        if(this.hitTimer > 0) {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI*2); ctx.fill(); ctx.restore();
+        }
+    }
+}
+
+class Drone extends Enemy {
+    constructor(x, y) {
+        super(x, y, 20 + (sector*10), 15, 100);
+        this.vx = MathUtils.rand(-1.5, 1.5); this.vy = MathUtils.rand(1.5, 3);
+    }
+    getColor() { return '#39FF14'; }
+    update() {
+        super.update(); this.x += this.vx; this.y += this.vy;
+        if (this.x < 20 || this.x > canvas.width - 20) this.vx *= -1;
+        if (this.timer % Math.max(60, 100 - (sector*10)) === 0 && this.y > 0) {
+            let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+            bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*4, Math.sin(angle)*4, '#ff00ff', false, 10, 5));
+        }
+        if (this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 10; ctx.shadowColor = '#39FF14';
+        ctx.fillStyle = '#228811'; ctx.beginPath(); ctx.ellipse(0, 0, 10, 15, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(57, 255, 20, 0.7)'; ctx.beginPath(); ctx.ellipse(-12, -5, 8, 4, Math.PI/4, 0, Math.PI*2); ctx.ellipse(12, -5, 8, 4, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Interceptor extends Enemy {
+    constructor(x, y) {
+        super(x, y, 80 + (sector*30), 18, 200);
+        this.vx = MathUtils.rand(-3, 3);
+        this.vy = 4 + (sector * 0.5); 
+    }
+    getColor() { return '#00aaff'; }
+    update() {
+        super.update(); this.x += this.vx; this.y += this.vy;
+        if (this.x < 20 || this.x > canvas.width - 20) this.vx *= -1;
+        if (this.timer % 50 === 0 && this.y > 0) {
+            bullets.push(new Bullet(this.x, this.y, 0, 8, '#00ffff', false, 15, 4));
+            bullets.push(new Bullet(this.x, this.y, -3, 7, '#00ffff', false, 15, 4));
+            bullets.push(new Bullet(this.x, this.y, 3, 7, '#00ffff', false, 15, 4));
+        }
+        if (this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 15; ctx.shadowColor = '#00aaff';
+        ctx.fillStyle = '#003366'; ctx.beginPath(); ctx.moveTo(0, 15); ctx.lineTo(15, -15); ctx.lineTo(-15, -15); ctx.fill();
+        ctx.fillStyle = '#00aaff'; ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(8, -10); ctx.lineTo(-8, -10); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Juggernaut extends Enemy {
+    constructor(x, y) {
+        super(x, y, 600 + (sector*200), 35, 800);
+        this.vy = 1;
+        this.targetY = MathUtils.rand(100, 300);
+    }
+    getColor() { return '#8a2be2'; }
+    update() {
+        super.update();
+        if (this.y < this.targetY) this.y += this.vy;
+        else this.x += Math.sin(this.timer * 0.02) * 2;
+
+        if (this.timer % 90 === 0 && this.y > 0) {
+            for(let i=0; i<12; i++) {
+                let angle = (Math.PI*2 / 12) * i + (this.timer * 0.01);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*5, Math.sin(angle)*5, '#ff00ff', false, 25, 7));
+            }
+        }
+        
+        if (this.timer > 1000) this.vy = 2; 
+        if (this.y > canvas.height + 100) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 20; ctx.shadowColor = '#8a2be2';
+        ctx.fillStyle = '#330033'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#8a2be2'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = '#ff00ff'; ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class QuestionDrone extends Enemy {
+    constructor(x, y) {
+        super(x, y, 150, 20, 500);
+        this.vx = MathUtils.rand(-1, 1) > 0 ? 1.5 : -1.5; this.vy = 1;
+        this.startX = x;
+    }
+    getColor() { return '#ffd700'; }
+    update() {
+        super.update(); this.x += this.vx; this.y += this.vy;
+        this.x = this.startX + Math.sin(this.timer * 0.05) * 100;
+        if (this.x < 30 || this.x > canvas.width - 30) this.vx *= -1;
+        if (this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    die() {
+        this.markedForDeletion = true; score += this.scoreValue; scoreDisplay.innerText = `SCORE: ${score}`;
+        createExplosion(this.x, this.y, this.radius * 3, this.getColor());
+        triggerQuestionModal('drone');
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 20; ctx.shadowColor = '#ffd700';
+        ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#000'; ctx.font = 'bold 24px Courier New'; ctx.textAlign = 'center'; ctx.fillText('?', 0, 8); ctx.restore();
+    }
+}
+
+class Cruiser extends Enemy {
+    constructor(x, y) {
+        super(x, y, 100 + (sector*25), 25, 500); this.vy = 1.0;
+    }
+    getColor() { return '#ff3300'; }
+    update() {
+        super.update(); this.y += this.vy;
+        if (this.y > 200 && this.vy > 0.5) this.vy -= 0.05;
+        
+        if (this.timer % Math.max(120, 180 - (sector*15)) === 0 && this.y > 0) {
+            const numBullets = 4;
+            for(let i=0; i<numBullets; i++) {
+                let angle = (Math.PI*2 / numBullets) * i + (this.timer * 0.01);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*3.0, Math.sin(angle)*3.0, '#ffaa00', false, 15, 6));
+            }
+        }
+        if (this.y > canvas.height + 100) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 15; ctx.shadowColor = '#ff3300';
+        ctx.fillStyle = '#333'; ctx.fillRect(-25, -20, 50, 40); ctx.fillStyle = '#ffff00'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    }
+}
+
+class Mine extends Enemy {
+    constructor(x, y) {
+        super(x, y, 50, 10, 50);
+        this.vx = 0; this.vy = 0.5;
+    }
+    getColor() { return '#ff0000'; }
+    update() {
+        super.update(); this.y += this.vy;
+        if (player && MathUtils.distanceSq(this.x, this.y, player.x, player.y) < 10000) {
+            this.takeDamage(999);
+        }
+        if (this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    die() {
+        super.die();
+        if (player && MathUtils.distanceSq(this.x, this.y, player.x, player.y) < 22500) player.takeDamage(20);
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 10; ctx.shadowColor = '#ff0000';
+        ctx.fillStyle = '#ffaa00'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+        let pulse = Math.sin(this.timer * 0.2) > 0 ? '#ff0000' : '#fff';
+        ctx.fillStyle = pulse; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class MineLayer extends Enemy {
+    constructor(x, y) {
+        super(x, y, 150 + (sector*20), 20, 300);
+        this.vx = MathUtils.rand(-2, 2); this.vy = 1;
+    }
+    getColor() { return '#ffff00'; }
+    update() {
+        super.update(); this.x += this.vx; this.y += this.vy;
+        if (this.y > 100 && this.vy > 0) this.vy = 0;
+        if (this.x < 30 || this.x > canvas.width - 30) this.vx *= -1;
+        
+        if (this.timer % 120 === 0 && this.y > 0) {
+            enemies.push(new Mine(this.x, this.y + 20));
+        }
+        if (this.timer > 1000) this.vy = 2;
+        if (this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y); ctx.shadowBlur = 15; ctx.shadowColor = '#ffff00';
+        ctx.fillStyle = '#444'; ctx.fillRect(-20, -15, 40, 30);
+        ctx.fillStyle = '#ffff00'; ctx.fillRect(-15, 10, 30, 10);
+        ctx.restore();
+    }
+}
+
+class Asteroid extends Enemy {
+    constructor(x, y, radius, generation) {
+        super(x, y, 100 * generation, radius, 50 * generation);
+        this.generation = generation;
+        this.vx = MathUtils.rand(-1.5, 1.5);
+        this.vy = MathUtils.rand(1, 2.5);
+        this.rot = 0;
+        this.rotSpeed = MathUtils.rand(-0.05, 0.05);
+    }
+    getColor() { return '#8b4513'; }
+    update() {
+        super.update();
+        this.x += this.vx; this.y += this.vy;
+        this.rot += this.rotSpeed;
+        if (this.y > canvas.height + this.radius) this.markedForDeletion = true;
+    }
+    die() {
+        super.die();
+        if (this.generation > 1) {
+            enemies.push(new Asteroid(this.x - 15, this.y, this.radius * 0.7, this.generation - 1));
+            enemies.push(new Asteroid(this.x + 15, this.y, this.radius * 0.7, this.generation - 1));
+        }
+    }
+    draw(ctx) {
+        if(this.hitTimer > 0) {
+            ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + 5, 0, Math.PI*2); ctx.fill(); ctx.restore();
+        } else {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+            ctx.shadowBlur = 5; ctx.shadowColor = '#ffaa00';
+            ctx.fillStyle = '#5c4033';
+            ctx.beginPath();
+            for(let i=0; i<6; i++) {
+                let a = (Math.PI*2/6)*i;
+                ctx.lineTo(Math.cos(a)*this.radius, Math.sin(a)*this.radius);
+            }
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = '#8b4513'; ctx.lineWidth = 3; ctx.stroke();
+            ctx.restore();
+        }
+    }
+}
+
+class PhaseShifter extends Enemy {
+    constructor(x, y) {
+        super(x, y, 120 + (sector*20), 15, 300);
+        this.vx = MathUtils.rand(-2, 2); this.vy = 1.5;
+    }
+    getColor() { return '#ffffff'; }
+    update() {
+        super.update();
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 20 || this.x > canvas.width - 20) this.vx *= -1;
+        
+        let cycle = this.timer % 240;
+        if (cycle < 120) {
+            this.isInvincible = true;
+        } else {
+            this.isInvincible = false;
+            if (cycle === 130 && this.y > 0 && player) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*12, Math.sin(angle)*12, '#ffffff', false, 25, 4));
+            }
+        }
+        if (this.y > canvas.height + 50) this.markedForDeletion = true;
+    }
+    draw(ctx) {
+        super.draw(ctx);
+        ctx.save(); ctx.translate(this.x, this.y);
+        if (this.isInvincible) ctx.globalAlpha = 0.2;
+        ctx.shadowBlur = 15; ctx.shadowColor = '#ffffff';
+        ctx.fillStyle = '#888'; ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(15, 10); ctx.lineTo(-15, 10); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class SpiderBoss extends Enemy {
+    constructor(modifier) {
+        super(canvas.width / 2, -150, 15000, 60, 20000);
+        this.phase = 1; this.targetY = 150; this.legAngle = 0;
+        this.modifier = modifier; 
+        
+        this.fireRateMod = 1.0;
+        this.damageMod = 1.0;
+        this.projSpeedMod = 1.0;
+        this.projSizeMod = 1.0;
+        this.spawnMinions = true;
+
+        bossHealthContainer.style.display = 'block'; bossWarning.style.display = 'block'; setTimeout(() => bossWarning.style.display = 'none', 3000);
+    }
+    getColor() { return '#ff0044'; }
+    update() {
+        super.update(); this.legAngle += 0.05;
+        if (this.y < this.targetY) { this.y += 2; return; }
+        this.x = canvas.width/2 + Math.sin(this.timer * 0.02) * 400; this.y = this.targetY + Math.cos(this.timer * 0.03) * 20;
+        
+        if (this.hp < this.maxHp * 0.75 && this.phase === 1) { this.phase = 2; spawnFloatingText(this.x, this.y, "PHASE 2: TACTICAL ARRAY", '#ff0000'); }
+        else if (this.hp < this.maxHp * 0.50 && this.phase === 2) { this.phase = 3; spawnFloatingText(this.x, this.y, "PHASE 3: LASER BARRAGE", '#ff0000'); }
+        else if (this.hp < this.maxHp * 0.25 && this.phase === 3) { this.phase = 4; spawnFloatingText(this.x, this.y, "WARNING: CRITICAL OVERDRIVE", '#ff0000'); }
+        bossHealthBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+        
+        if (this.phase === 1) {
+            if (this.timer % Math.max(5, Math.floor(15 * this.fireRateMod)) === 0) {
+                let baseAngle = Math.PI/2 + Math.sin(this.timer * 0.05) * 0.8;
+                for(let i=-1; i<=1; i++) {
+                    let vx = Math.cos(baseAngle + i*0.2)*7 * this.projSpeedMod;
+                    let vy = Math.sin(baseAngle + i*0.2)*7 * this.projSpeedMod;
+                    bullets.push(new Bullet(this.x, this.y+40, vx, vy, '#ff0044', false, 15*this.damageMod, 7*this.projSizeMod));
+                }
+            }
+        } 
+        else if (this.phase === 2) {
+            if (this.timer % Math.max(15, Math.floor(50 * this.fireRateMod)) === 0 && player) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                for(let i=-2; i<=2; i++) {
+                    let vx = Math.cos(angle + i*0.15)*9 * this.projSpeedMod;
+                    let vy = Math.sin(angle + i*0.15)*9 * this.projSpeedMod;
+                    bullets.push(new Bullet(this.x, this.y+40, vx, vy, '#ff00ff', false, 20*this.damageMod, 6*this.projSizeMod));
+                }
+            }
+            if (this.timer % Math.max(25, Math.floor(80 * this.fireRateMod)) === 0) {
+                for(let i=0; i<12; i++) { 
+                    let angle = (Math.PI*2/12)*i + this.timer; 
+                    let vx = Math.cos(angle)*5 * this.projSpeedMod;
+                    let vy = Math.sin(angle)*5 * this.projSpeedMod;
+                    bullets.push(new Bullet(this.x, this.y, vx, vy, '#ffaa00', false, 15*this.damageMod, 6*this.projSizeMod)); 
+                }
+            }
+        }
+        else if (this.phase === 3) {
+            if (this.timer % Math.max(30, Math.floor(100 * this.fireRateMod)) === 0) {
+                let gap = Math.floor(Math.random() * 8) - 4;
+                for(let i=-6; i<=6; i++) {
+                    if (Math.abs(i - gap) > 2) {
+                        bullets.push(new Bullet(this.x + i*30, this.y+40, 0, 6 * this.projSpeedMod, '#00ffff', false, 20*this.damageMod, 8*this.projSizeMod));
+                    }
+                }
+            }
+            if (this.spawnMinions && this.timer % 150 === 0) { enemies.push(new Drone(this.x - 50, this.y)); enemies.push(new Drone(this.x + 50, this.y)); }
+        }
+        else if (this.phase === 4) {
+            if (this.timer % Math.max(2, Math.floor(4 * this.fireRateMod)) === 0) {
+                let a1 = this.timer * 0.3; let a2 = -this.timer * 0.3;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a1)*6*this.projSpeedMod, Math.sin(a1)*6*this.projSpeedMod, '#ff0000', false, 20*this.damageMod, 8*this.projSizeMod));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a2)*6*this.projSpeedMod, Math.sin(a2)*6*this.projSpeedMod, '#ff00ff', false, 20*this.damageMod, 8*this.projSizeMod));
+            }
+        }
+    }
+    die() { super.die(); bossHealthContainer.style.display = 'none'; triggerPostBossCommModal(); }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y);
+        ctx.strokeStyle = '#444'; ctx.lineWidth = 8;
+        for (let i = 0; i < 6; i++) {
+            let side = i < 3 ? -1 : 1; let legIndex = i % 3; let currentAngle = (legIndex * 0.4 + 0.2) * side + Math.sin(this.legAngle + legIndex) * 0.2;
+            ctx.beginPath(); ctx.moveTo(0, 0);
+            let j1x = Math.cos(currentAngle) * 80 + (side * 20); let j1y = Math.sin(currentAngle) * 40 - 20; ctx.lineTo(j1x, j1y);
+            let j2x = j1x + Math.cos(currentAngle + (side*0.5)) * 60; let j2y = j1y + Math.sin(currentAngle + (side*0.5)) * 80; ctx.lineTo(j2x, j2y);
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff0044'; ctx.beginPath(); ctx.arc(0, 10, 15, 0, Math.PI*2); ctx.fill(); ctx.restore();
+    }
+}
+
+class DreadnoughtBoss extends Enemy {
+    constructor(modifier) {
+        super(canvas.width / 2, -200, 30000, 100, 40000);
+        this.phase = 1; this.targetY = 180;
+        this.modifier = modifier; 
+        
+        this.fireRateMod = 1.0;
+        this.damageMod = 1.0;
+        this.projSpeedMod = 1.0;
+        this.projSizeMod = 1.0;
+        this.spawnMinions = true;
+
+        bossHealthContainer.style.display = 'block'; bossWarning.style.display = 'block'; setTimeout(() => bossWarning.style.display = 'none', 3000);
+    }
+    getColor() { return '#ff8800'; }
+    update() {
+        super.update();
+        if (this.y < this.targetY) { this.y += 1; return; }
+        
+        this.x = canvas.width/2 + Math.sin(this.timer * 0.01) * 300;
+
+        if (this.hp < this.maxHp * 0.75 && this.phase === 1) { this.phase = 2; spawnFloatingText(this.x, this.y, "PHASE 2: BEAM CANNONS", '#ff8800'); }
+        else if (this.hp < this.maxHp * 0.50 && this.phase === 2) { this.phase = 3; spawnFloatingText(this.x, this.y, "PHASE 3: CRUISER DEPLOYMENT", '#ff8800'); }
+        else if (this.hp < this.maxHp * 0.25 && this.phase === 3) { this.phase = 4; spawnFloatingText(this.x, this.y, "CORE EXPOSED", '#ff0000'); }
+        bossHealthBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+        
+        if (this.phase === 1) {
+            if (this.timer % Math.max(20, Math.floor(60 * this.fireRateMod)) === 0) {
+                bullets.push(new Bullet(this.x - 60, this.y + 30, -2*this.projSpeedMod, 8*this.projSpeedMod, '#ff8800', false, 25*this.damageMod, 8*this.projSizeMod));
+                bullets.push(new Bullet(this.x + 60, this.y + 30, 2*this.projSpeedMod, 8*this.projSpeedMod, '#ff8800', false, 25*this.damageMod, 8*this.projSizeMod));
+            }
+            if (this.timer % Math.max(30, Math.floor(90 * this.fireRateMod)) === 0 && player) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                for(let i=-3; i<=3; i++) {
+                    bullets.push(new Bullet(this.x, this.y+50, Math.cos(angle + i*0.1)*8*this.projSpeedMod, Math.sin(angle + i*0.1)*8*this.projSpeedMod, '#ff0000', false, 20*this.damageMod, 6*this.projSizeMod));
+                }
+            }
+        } 
+        else if (this.phase === 2) {
+            if (this.timer % Math.max(25, Math.floor(80 * this.fireRateMod)) === 0) {
+                let sweepAng = Math.PI/2 + Math.sin(this.timer * 0.02) * 1.5;
+                for(let i=0; i<10; i++) {
+                    setTimeout(() => { 
+                        if(!this.markedForDeletion && gameState === 'PLAYING') bullets.push(new Bullet(this.x, this.y+50, Math.cos(sweepAng)*15*this.projSpeedMod, Math.sin(sweepAng)*15*this.projSpeedMod, '#ffff00', false, 30*this.damageMod, 8*this.projSizeMod)); 
+                    }, i*50);
+                }
+            }
+        }
+        else if (this.phase === 3) {
+            if (this.spawnMinions && this.timer % 200 === 0) { enemies.push(new Cruiser(this.x - 80, this.y)); enemies.push(new Cruiser(this.x + 80, this.y)); }
+            if (this.timer % Math.max(5, Math.floor(15 * this.fireRateMod)) === 0) {
+                bullets.push(new Bullet(this.x + MathUtils.rand(-100,100), this.y+50, 0, MathUtils.rand(4, 9)*this.projSpeedMod, '#ffaa00', false, 15*this.damageMod, 5*this.projSizeMod));
+            }
+        }
+        else if (this.phase === 4 && player) {
+            if (this.timer % Math.max(6, Math.floor(20 * this.fireRateMod)) === 0) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*12*this.projSpeedMod, Math.sin(angle)*12*this.projSpeedMod, '#ffffff', false, 35*this.damageMod, 10*this.projSizeMod));
+            }
+            if (this.timer % Math.max(2, Math.floor(5 * this.fireRateMod)) === 0) {
+                let a1 = this.timer * 0.5;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a1)*8*this.projSpeedMod, Math.sin(a1)*8*this.projSpeedMod, '#ff0000', false, 20*this.damageMod, 6*this.projSizeMod));
+            }
+        }
+    }
+    die() { super.die(); bossHealthContainer.style.display = 'none'; triggerPostBossCommModal(); }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 20; ctx.shadowColor = '#ff8800';
+        ctx.fillStyle = '#222'; ctx.fillRect(-100, -40, 200, 80);
+        ctx.fillStyle = '#444'; ctx.beginPath(); ctx.moveTo(-100, 40); ctx.lineTo(-60, 80); ctx.lineTo(60, 80); ctx.lineTo(100, 40); ctx.fill();
+        ctx.strokeStyle = '#ff8800'; ctx.lineWidth = 3; ctx.strokeRect(-100, -40, 200, 80);
+        
+        ctx.fillStyle = '#333'; ctx.fillRect(-80, 40, 30, 30); ctx.fillRect(50, 40, 30, 30);
+        
+        if(this.phase === 4) {
+            ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 30;
+            ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+        } else {
+            ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class EmperorBoss extends Enemy {
+    constructor(modifier) {
+        super(canvas.width / 2, -150, 50000, 70, 100000);
+        this.phase = 1; this.targetY = 200;
+        this.modifier = modifier; 
+        
+        this.fireRateMod = 1.0;
+        this.damageMod = 1.0;
+        this.projSpeedMod = 1.0;
+        this.projSizeMod = 1.0;
+        this.spawnMinions = true;
+
+        bossHealthContainer.style.display = 'block'; bossWarning.style.display = 'block'; setTimeout(() => bossWarning.style.display = 'none', 3000);
+    }
+    getColor() { return '#ff00ff'; }
+    update() {
+        super.update();
+        if (this.y < this.targetY) { this.y += 3; return; }
+        
+        if (this.hp < this.maxHp * 0.75 && this.phase === 1) { this.phase = 2; spawnFloatingText(this.x, this.y, "PHASE 2: GRAVITY WELL", '#ff00ff'); }
+        else if (this.hp < this.maxHp * 0.50 && this.phase === 2) { this.phase = 3; spawnFloatingText(this.x, this.y, "PHASE 3: VOID SHIFT", '#ff00ff'); }
+        else if (this.hp < this.maxHp * 0.25 && this.phase === 3) { this.phase = 4; spawnFloatingText(this.x, this.y, "FINAL PHASE: FRACTAL RUIN", '#ffffff'); }
+        bossHealthBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+
+        if (this.phase !== 3) {
+            this.x += Math.cos(this.timer * 0.02) * 3;
+            this.y = this.targetY + Math.sin(this.timer * 0.05) * 30;
+        }
+
+        if (this.phase === 1) {
+            if (this.timer % Math.max(3, Math.floor(6 * this.fireRateMod)) === 0) {
+                let a1 = this.timer * 0.1; let a2 = -this.timer * 0.1;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a1)*6*this.projSpeedMod, Math.sin(a1)*6*this.projSpeedMod, '#ff00ff', false, 15*this.damageMod, 7*this.projSizeMod));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a2)*6*this.projSpeedMod, Math.sin(a2)*6*this.projSpeedMod, '#00ffff', false, 15*this.damageMod, 7*this.projSizeMod));
+            }
+        }
+        else if (this.phase === 2 && player) {
+            let angleToBoss = MathUtils.angle(player.x, player.y, this.x, this.y);
+            player.x += Math.cos(angleToBoss) * 1.5;
+            player.y += Math.sin(angleToBoss) * 1.5;
+
+            if (this.timer % Math.max(20, Math.floor(40 * this.fireRateMod)) === 0) {
+                for(let i=0; i<16; i++) {
+                    let angle = (Math.PI*2/16)*i + this.timer;
+                    bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*4*this.projSpeedMod, Math.sin(angle)*4*this.projSpeedMod, '#ffffff', false, 20*this.damageMod, 6*this.projSizeMod));
+                }
+            }
+        }
+        else if (this.phase === 3) {
+            if (this.timer % 120 === 0) {
+                spawnParticle(this.x, this.y, 0, 0, '#ff00ff', 30, 'ring');
+                this.x = MathUtils.rand(100, canvas.width - 100);
+                this.y = MathUtils.rand(100, 300);
+                spawnParticle(this.x, this.y, 0, 0, '#00ffff', 30, 'ring');
+                
+                for(let i=0; i<20; i++) {
+                    let angle = (Math.PI*2/20)*i;
+                    bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*8*this.projSpeedMod, Math.sin(angle)*8*this.projSpeedMod, '#ff00ff', false, 25*this.damageMod, 8*this.projSizeMod));
+                }
+            }
+        }
+        else if (this.phase === 4) {
+            if (this.timer % Math.max(2, Math.floor(4 * this.fireRateMod)) === 0) {
+                let a = this.timer * 0.4;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a)*7*this.projSpeedMod, Math.sin(a)*7*this.projSpeedMod, '#ffffff', false, 20*this.damageMod, 8*this.projSizeMod));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a + Math.PI)*7*this.projSpeedMod, Math.sin(a + Math.PI)*7*this.projSpeedMod, '#ff00ff', false, 20*this.damageMod, 8*this.projSizeMod));
+            }
+            if (this.timer % Math.max(30, Math.floor(60 * this.fireRateMod)) === 0 && player) {
+                let targetAng = MathUtils.angle(this.x, this.y, player.x, player.y);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(targetAng)*15*this.projSpeedMod, Math.sin(targetAng)*15*this.projSpeedMod, '#00ffff', false, 40*this.damageMod, 12*this.projSizeMod));
+            }
+        }
+    }
+    die() { super.die(); bossHealthContainer.style.display = 'none'; triggerPostBossCommModal(); }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 30; ctx.shadowColor = '#ff00ff';
+        
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.moveTo(0, -60); ctx.lineTo(60, 0); ctx.lineTo(0, 60); ctx.lineTo(-60, 0);
+        ctx.fill();
+        
+        let wingOffset = Math.sin(this.timer * 0.1) * 10;
+        ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.moveTo(70 + wingOffset, -30); ctx.lineTo(120 + wingOffset, 40); ctx.lineTo(50 + wingOffset, 20); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-70 - wingOffset, -30); ctx.lineTo(-120 - wingOffset, 40); ctx.lineTo(-50 - wingOffset, 20); ctx.fill();
+
+        ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, -60); ctx.lineTo(60, 0); ctx.lineTo(0, 60); ctx.lineTo(-60, 0); ctx.closePath(); ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+
+class CrushCoreBoss extends Enemy {
+    constructor(modifier) {
+        super(canvas.width / 2, -200, 60000, 80, 150000);
+        this.phase = 1; this.targetY = 150;
+        this.modifier = modifier; 
+        
+        this.fireRateMod = 1.0;
+        this.damageMod = 1.0;
+        this.projSpeedMod = 1.0;
+        this.projSizeMod = 1.0;
+        this.spawnMinions = true;
+        
+        bossHealthContainer.style.display = 'block'; bossWarning.style.display = 'block'; setTimeout(() => bossWarning.style.display = 'none', 3000);
+    }
+    getColor() { return '#ffaa00'; }
+    update() {
+        super.update();
+        if (this.y < this.targetY) { this.y += 2; return; }
+        
+        this.x = canvas.width/2 + Math.sin(this.timer * 0.01) * 200;
+        
+        if (this.hp < this.maxHp * 0.66 && this.phase === 1) { this.phase = 2; spawnFloatingText(this.x, this.y, "PHASE 2: ASTEROID PULL", '#ffaa00'); }
+        else if (this.hp < this.maxHp * 0.33 && this.phase === 2) { this.phase = 3; spawnFloatingText(this.x, this.y, "PHASE 3: CORE MELTDOWN", '#ff0000'); }
+        bossHealthBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+
+        if (this.phase === 1) {
+            if (this.timer % Math.max(10, Math.floor(30 * this.fireRateMod)) === 0) {
+                bullets.push(new Bullet(this.x - 50, this.y + 40, 0, 8*this.projSpeedMod, '#ffaa00', false, 20*this.damageMod, 8*this.projSizeMod));
+                bullets.push(new Bullet(this.x + 50, this.y + 40, 0, 8*this.projSpeedMod, '#ffaa00', false, 20*this.damageMod, 8*this.projSizeMod));
+            }
+            if (this.spawnMinions && this.timer % 150 === 0) { enemies.push(new Asteroid(MathUtils.rand(100, canvas.width-100), -50, 30, 2)); }
+        }
+        else if (this.phase === 2) {
+            if (player) {
+                let angleToBoss = MathUtils.angle(player.x, player.y, this.x, this.y);
+                player.x += Math.cos(angleToBoss) * 2.0;
+                player.y += Math.sin(angleToBoss) * 2.0;
+            }
+
+            if (this.timer % Math.max(15, Math.floor(45 * this.fireRateMod)) === 0 && player) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*10*this.projSpeedMod, Math.sin(angle)*10*this.projSpeedMod, '#ff0000', false, 30*this.damageMod, 10*this.projSizeMod));
+            }
+            if (this.spawnMinions && this.timer % 100 === 0) { enemies.push(new Mine(this.x, this.y + 50)); }
+        }
+        else if (this.phase === 3) {
+            if (this.timer % Math.max(2, Math.floor(6 * this.fireRateMod)) === 0) {
+                let a = this.timer * 0.2;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a)*9*this.projSpeedMod, Math.sin(a)*9*this.projSpeedMod, '#ffaa00', false, 25*this.damageMod, 6*this.projSizeMod));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a + Math.PI)*9*this.projSpeedMod, Math.sin(a + Math.PI)*9*this.projSpeedMod, '#ffaa00', false, 25*this.damageMod, 6*this.projSizeMod));
+            }
+        }
+    }
+    die() { super.die(); bossHealthContainer.style.display = 'none'; triggerPostBossCommModal(); }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 20; ctx.shadowColor = '#ffaa00';
+        ctx.fillStyle = '#420'; ctx.fillRect(-80, -60, 160, 120);
+        ctx.strokeStyle = '#ffaa00'; ctx.lineWidth = 4; ctx.strokeRect(-80, -60, 160, 120);
+        
+        ctx.fillStyle = '#ffaa00'; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI*2); ctx.fill();
+        if (this.phase >= 2) {
+            ctx.fillStyle = '#ff0000'; ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = 'rgba(255, 170, 0, 0.1)';
+            ctx.beginPath(); ctx.moveTo(-30, 0); ctx.lineTo(-150, canvas.height); ctx.lineTo(150, canvas.height); ctx.lineTo(30, 0); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class VoidReaperBoss extends Enemy {
+    constructor(modifier) {
+        super(canvas.width / 2, -200, 80000, 60, 250000);
+        this.phase = 1; this.targetY = 180;
+        this.modifier = modifier; 
+        
+        this.fireRateMod = 1.0;
+        this.damageMod = 1.0;
+        this.projSpeedMod = 1.0;
+        this.projSizeMod = 1.0;
+        this.spawnMinions = true;
+
+        bossHealthContainer.style.display = 'block'; bossWarning.style.display = 'block'; setTimeout(() => bossWarning.style.display = 'none', 3000);
+    }
+    getColor() { return '#8a2be2'; }
+    update() {
+        super.update();
+        if (this.y < this.targetY) { this.y += 2; return; }
+        
+        this.x += Math.cos(this.timer * 0.03) * 5;
+
+        if (this.hp < this.maxHp * 0.50 && this.phase === 1) { this.phase = 2; spawnFloatingText(this.x, this.y, "PHASE 2: DARK MATTER", '#8a2be2'); }
+        bossHealthBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+
+        if (this.phase === 1) {
+            if (this.timer % Math.max(4, Math.floor(8 * this.fireRateMod)) === 0) {
+                bullets.push(new Bullet(this.x, this.y, MathUtils.rand(-5, 5), MathUtils.rand(2, 10)*this.projSpeedMod, '#8a2be2', false, 20*this.damageMod, 6*this.projSizeMod));
+            }
+            if (this.spawnMinions && this.timer % 150 === 0) { enemies.push(new PhaseShifter(this.x, this.y)); }
+        }
+        else if (this.phase === 2) {
+            if (this.timer % Math.max(20, Math.floor(40 * this.fireRateMod)) === 0 && player) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                for(let i=-2; i<=2; i++) {
+                    bullets.push(new Bullet(this.x, this.y, Math.cos(angle+i*0.2)*12*this.projSpeedMod, Math.sin(angle+i*0.2)*12*this.projSpeedMod, '#000000', false, 35*this.damageMod, 12*this.projSizeMod));
+                }
+            }
+            if (this.timer % 60 === 0) {
+                let bx = MathUtils.rand(100, canvas.width-100);
+                let by = MathUtils.rand(100, canvas.height-200);
+                spawnParticle(bx, by, 0, 0, '#8a2be2', 60, 'ring');
+                setTimeout(() => {
+                    if(!this.markedForDeletion && gameState === 'PLAYING') {
+                        for(let i=0; i<8; i++) {
+                            let a = (Math.PI*2/8)*i;
+                            bullets.push(new Bullet(bx, by, Math.cos(a)*8*this.projSpeedMod, Math.sin(a)*8*this.projSpeedMod, '#ffffff', false, 25*this.damageMod, 8*this.projSizeMod));
+                        }
+                    }
+                }, 1000);
+            }
+        }
+    }
+    die() { super.die(); bossHealthContainer.style.display = 'none'; triggerPostBossCommModal(); }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 30; ctx.shadowColor = '#8a2be2';
+        ctx.fillStyle = '#0a001a';
+        ctx.beginPath(); ctx.moveTo(0, -60); ctx.lineTo(40, 20); ctx.lineTo(0, 80); ctx.lineTo(-40, 20); ctx.fill();
+        ctx.strokeStyle = '#8a2be2'; ctx.lineWidth = 3; ctx.stroke();
+        
+        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 10, 20, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+    }
+}
+
+class DeityBoss extends Enemy {
+    constructor(modifier) {
+        super(canvas.width / 2, -200, 200000, 90, 1000000);
+        this.phase = 1; this.targetY = 200;
+        this.modifier = modifier; 
+        
+        this.fireRateMod = 1.0;
+        this.damageMod = 1.0;
+        this.projSpeedMod = 1.0;
+        this.projSizeMod = 1.0;
+        
+        bossHealthContainer.style.display = 'block'; bossWarning.style.display = 'block'; setTimeout(() => bossWarning.style.display = 'none', 3000);
+        bossHealthContainer.style.borderColor = '#ffffff';
+        bossHealthBar.style.background = 'linear-gradient(90deg, #ffffff, #ffff00)';
+    }
+    getColor() { return '#ffffff'; }
+    update() {
+        super.update();
+        if (this.y < this.targetY) { this.y += 1; return; }
+        
+        this.x = canvas.width/2 + Math.sin(this.timer * 0.02) * 300;
+        this.y = this.targetY + Math.cos(this.timer * 0.01) * 50;
+
+        if (this.hp < this.maxHp * 0.8 && this.phase === 1) { this.phase = 2; spawnFloatingText(this.x, this.y, "PHASE 2: HEAVENLY PILLARS", '#ffff00'); }
+        else if (this.hp < this.maxHp * 0.6 && this.phase === 2) { this.phase = 3; spawnFloatingText(this.x, this.y, "PHASE 3: FRACTAL RINGS", '#00ffff'); }
+        else if (this.hp < this.maxHp * 0.4 && this.phase === 3) { this.phase = 4; spawnFloatingText(this.x, this.y, "PHASE 4: JUDGEMENT", '#ff0000'); }
+        else if (this.hp < this.maxHp * 0.2 && this.phase === 4) { this.phase = 5; spawnFloatingText(this.x, this.y, "FINAL PHASE: OBLIVION", '#ffffff'); }
+        bossHealthBar.style.width = `${(this.hp / this.maxHp) * 100}%`;
+
+        if (this.phase === 1) {
+            if (this.timer % Math.max(4, Math.floor(8 * this.fireRateMod)) === 0) {
+                let a = this.timer * 0.2;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a)*8, Math.sin(a)*8, '#ffffff', false, 20, 8));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a+Math.PI)*8, Math.sin(a+Math.PI)*8, '#ffff00', false, 20, 8));
+            }
+        }
+        else if (this.phase === 2) {
+            if (this.timer % Math.max(30, Math.floor(60 * this.fireRateMod)) === 0) {
+                let px = MathUtils.rand(50, canvas.width-50);
+                for(let i=0; i<10; i++) {
+                    bullets.push(new Bullet(px, 0 + (i*40), 0, 12, '#ffff00', false, 30, 10));
+                }
+            }
+            if (this.timer % Math.max(10, Math.floor(20 * this.fireRateMod)) === 0 && player) {
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                bullets.push(new Bullet(this.x, this.y, Math.cos(angle)*15, Math.sin(angle)*15, '#ff0000', false, 25, 6));
+            }
+        }
+        else if (this.phase === 3) {
+            if (this.timer % Math.max(40, Math.floor(80 * this.fireRateMod)) === 0) {
+                for(let i=0; i<24; i++) {
+                    let a = (Math.PI*2/24)*i + this.timer;
+                    bullets.push(new Bullet(this.x, this.y, Math.cos(a)*6, Math.sin(a)*6, '#00ffff', false, 25, 8));
+                }
+            }
+        }
+        else if (this.phase === 4) {
+            let a = this.timer * 0.1;
+            if (this.timer % 2 === 0) {
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a)*10, Math.sin(a)*10, '#ff0000', false, 25, 10));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(-a)*10, Math.sin(-a)*10, '#ffffff', false, 25, 10));
+            }
+        }
+        else if (this.phase === 5) {
+            if (this.timer % 3 === 0) {
+                let a1 = this.timer * 0.3; let a2 = -this.timer * 0.3;
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a1)*8, Math.sin(a1)*8, '#ffffff', false, 30, 12));
+                bullets.push(new Bullet(this.x, this.y, Math.cos(a2)*8, Math.sin(a2)*8, '#ffff00', false, 30, 12));
+                if (player) {
+                    let targetAng = MathUtils.angle(this.x, this.y, player.x, player.y);
+                    bullets.push(new Bullet(this.x, this.y, Math.cos(targetAng)*18, Math.sin(targetAng)*18, '#ff0000', false, 40, 8));
+                }
+            }
+        }
+    }
+    die() { 
+        super.die(); 
+        bossHealthContainer.style.display = 'none'; 
+        
+        for(let i=0; i<200; i++) {
+            let x = MathUtils.rand(0, canvas.width);
+            let y = MathUtils.rand(0, canvas.height);
+            setTimeout(() => {
+                createExplosion(x, y, 200, '#ffffff');
+                screenShake = 20;
+            }, i * 15);
+        }
+        
+        setTimeout(() => triggerVictory(), 4000);
+    }
+    draw(ctx) {
+        super.draw(ctx); ctx.save(); ctx.translate(this.x, this.y);
+        ctx.shadowBlur = 50; ctx.shadowColor = '#ffffff';
+        
+        ctx.fillStyle = '#fff';
+        for(let i=0; i<8; i++) {
+            let a = (Math.PI*2/8)*i + (this.timer * 0.02);
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a)*30, Math.sin(a)*30);
+            ctx.lineTo(Math.cos(a+0.2)*120, Math.sin(a+0.2)*120);
+            ctx.lineTo(Math.cos(a-0.2)*120, Math.sin(a-0.2)*120);
+            ctx.fill();
+        }
+        
+        ctx.fillStyle = '#ffff00';
+        ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI*2); ctx.fill();
+        
+        ctx.restore();
+    }
+}
+
+class PowerUp {
+    constructor(x, y) {
+        this.x = x; this.y = y; this.vy = 2; this.radius = 15; this.timer = 0;
+        const types = ['shield', 'orbital', 'missile', 'upgrade', 'health', 'life'];
+        this.type = types[Math.floor(Math.random() * types.length)];
+        this.markedForDeletion = false;
+    }
+    update() { 
+        if (this.y > canvas.height + 50) this.markedForDeletion = true; 
+        if (player && player.magneticScoop) {
+            let distSq = MathUtils.distanceSq(this.x, this.y, player.x, player.y);
+            if (distSq < 90000) { 
+                let angle = MathUtils.angle(this.x, this.y, player.x, player.y);
+                this.x += Math.cos(angle) * 5;
+                this.y += Math.sin(angle) * 5;
+            }
+        }
+        this.y += this.vy; 
+        this.timer++; 
+    }
+    draw(ctx) {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.globalCompositeOperation = 'lighter';
+        let color = {shield: 'gold', orbital: '#ffaa00', missile: '#ff3333', upgrade: '#00ffff', health: '#00ff00', life: '#00aaff'}[this.type];
+        ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI*2); ctx.stroke();
+        ctx.fillStyle = color;
+        if (this.type === 'health') { ctx.fillRect(-2, -6, 4, 12); ctx.fillRect(-6, -2, 12, 4); }
+        else if (this.type === 'life') { 
+            ctx.font = 'bold 12px Courier New'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('+1', 0, 0); 
+        }
+        else { ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill(); }
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, vx, vy, color, life, type = 'normal') {
+        this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.color = color; this.life = life; this.maxLife = life; this.type = type; this.markedForDeletion = false;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.life--; if (this.life <= 0) this.markedForDeletion = true; }
+    draw(ctx) {
+        ctx.save(); ctx.globalAlpha = this.life / this.maxLife; ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, 2, 2); ctx.restore();
+    }
+}
+
+function spawnParticle(x, y, vx, vy, color, life, type) { particles.push(new Particle(x, y, vx, vy, color, life, type)); }
+function createExplosion(x, y, size, color) {
+    for(let i=0; i<15; i++) {
+        let angle = Math.random() * Math.PI * 2; let speed = Math.random() * (size * 0.1);
+        spawnParticle(x, y, Math.cos(angle)*speed, Math.sin(angle)*speed, color, MathUtils.rand(20, 40));
+    }
+}
+function spawnFloatingText(x, y, text, color) { floatingTexts.push({ x: x, y: y, text: text, color: color, life: 60, maxLife: 60 }); }
+
+function updateHealthUI() {
+    if (!player) return;
+    let pct = Math.max(0, (player.hp / player.maxHp) * 100);
+    healthBar.style.width = `${pct}%`;
+    healthBar.style.background = pct < 30 ? '#ff0000' : 'linear-gradient(90deg, #880000, #ff0044)';
+}
+
+function applyPowerUp(type) {
+    if (!player) return;
+    let text = type.toUpperCase();
+    if (type === 'upgrade') text = 'WEAPON OVERDRIVE';
+    spawnFloatingText(player.x, player.y - 30, text, '#fff');
+    
+    switch(type) {
+        case 'shield': player.shieldActive = true; player.shieldHp = 50; break;
+        case 'health': player.hp = Math.min(player.maxHp, player.hp + 25); updateHealthUI(); break;
+        case 'orbital': player.activeBuffs.orbital = 300; break;
+        case 'missile': player.activeBuffs.missile = 300; break;
+        case 'upgrade': player.activeBuffs.weapon = 480; break; 
+        case 'life': 
+            lives++; 
+            document.getElementById('lives-display').innerText = `LIVES: ${lives}`; 
+            spawnParticle(player.x, player.y, 0, 0, '#00aaff', 30, 'ring');
+            break;
+    }
+}
+
+function triggerBossChoiceModal() {
+    gameState = 'QUESTION';
+    document.getElementById('boss-choice-modal').style.display = 'block';
+}
+
+window.startRefuelSequence = function() {
+    document.getElementById('boss-choice-modal').style.display = 'none';
+    refuelQuestionsAsked = 0;
+    triggerQuestionModal('refuel');
+}
+
+window.skipToBoss = function() {
+    document.getElementById('boss-choice-modal').style.display = 'none';
+    triggerCommLinkModal();
+}
+
+function triggerQuestionModal(context) {
+    gameState = 'QUESTION'; currentQuestionContext = context;
+    let q = getQuestion();
+    
+    const modal = document.getElementById('question-modal');
+    const title = document.getElementById('question-title');
+    const subtitle = document.getElementById('question-subtitle');
+    const qText = document.getElementById('question-text');
+    const ansContainer = document.getElementById('answers-container');
+    
+    if (context === 'intermission') {
+        title.innerText = 'UPCOMING WAVE APPROACHING!';
+        title.style.color = '#0ff';
+        subtitle.innerText = 'Answer correctly for a system upgrade!';
+    } else if (context === 'drone') {
+        title.innerText = 'QUESTION DRONE DESTROYED!';
+        title.style.color = '#ffd700';
+        subtitle.innerText = 'Answer correctly to trigger ELECTRICAL SMART BOMB!';
+    } else if (context === 'refuel') {
+        title.innerText = 'REFUEL PROTOCOL INITIATED';
+        title.style.color = '#00ff00';
+        subtitle.innerText = `Question ${refuelQuestionsAsked + 1} of 3 - Answer correctly for an upgrade!`;
+    } else if (context === 'revive') {
+        title.innerText = 'HULL BREACH DETECTED - CORE FAILING';
+        title.style.color = '#ff0000';
+        subtitle.innerText = `MANUAL OVERRIDE REQUIRED: Bypass security to reboot systems. (Backups remaining: ${lives})`;
+    }
+    
+    qText.innerText = q.q;
+    ansContainer.innerHTML = '';
+    
+    q.options.forEach((opt, index) => {
+        let btn = document.createElement('button');
+        btn.className = 'ans-btn';
+        btn.innerText = opt;
+        btn.onclick = () => handleAnswer(index === q.ans);
+        ansContainer.appendChild(btn);
+    });
+    
+    modal.style.display = 'block';
+}
+
+function handleAnswer(isCorrect) {
+    const modal = document.getElementById('question-modal');
+    const qText = document.getElementById('question-text');
+    const ansContainer = document.getElementById('answers-container');
+    
+    if (isCorrect) {
+        modal.style.display = 'none';
+        if (currentQuestionContext === 'intermission' || currentQuestionContext === 'refuel') {
+            if (currentQuestionContext === 'refuel') refuelQuestionsAsked++;
+            triggerUpgradeModal();
+        } else if (currentQuestionContext === 'drone') {
+            triggerElectricalBomb();
+            gameState = 'PLAYING';
+        } else if (currentQuestionContext === 'revive') {
+            if (player) {
+                player.hp = player.maxHp;
+                updateHealthUI();
+                bullets = bullets.filter(b => b.isPlayer || MathUtils.distanceSq(player.x, player.y, b.x, b.y) > 40000); 
+                enemies.forEach(e => {
+                    if (!(e instanceof SpiderBoss) && !(e instanceof DreadnoughtBoss) && !(e instanceof EmperorBoss) && !(e instanceof CrushCoreBoss) && !(e instanceof VoidReaperBoss) && !(e instanceof DeityBoss) && MathUtils.distanceSq(player.x, player.y, e.x, e.y) < 22500) {
+                        e.takeDamage(9999);
+                    }
+                });
+                player.shieldActive = true;
+                player.shieldHp = 50;
+                spawnFloatingText(player.x, player.y, "SYSTEMS REBOOTED", '#00ff00');
+            }
+            gameState = 'PLAYING';
+        }
+    } else {
+        ansContainer.innerHTML = '';
+        if (currentQuestionContext === 'revive') {
+            qText.innerHTML = '<span style="color:red; font-size:30px; font-weight:bold;">OVERRIDE FAILED. CORE MELTDOWN IMMINENT.</span>';
+        } else {
+            qText.innerHTML = '<span style="color:red; font-size:30px; font-weight:bold;">INCORRECT! NO REWARD.</span>';
+        }
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            if (currentQuestionContext === 'refuel') {
+                refuelQuestionsAsked++;
+                checkRefuelContinuation();
+            } else if (currentQuestionContext === 'revive') {
+                triggerGameOver();
+            } else {
+                gameState = 'PLAYING';
+            }
+        }, 1500);
+    }
+}
+
+function triggerElectricalBomb() {
+    if (!player) return;
+    spawnFloatingText(canvas.width/2, canvas.height/2, "TACTICAL NUKE DEPLOYED", '#fff');
+    flashAlpha = 1.0;
+    screenShake = 30;
+    
+    for(let i=0; i<100; i++) {
+        setTimeout(() => {
+            if (gameState !== 'PLAYING') return;
+            let x = MathUtils.rand(0, canvas.width);
+            let y = MathUtils.rand(0, canvas.height);
+            let colors = ['#ff00ff', '#00ffff', '#ffffff'];
+            createExplosion(x, y, MathUtils.rand(50, 150), colors[Math.floor(Math.random()*3)]);
+            screenShake = Math.max(screenShake, 10);
+        }, i * 20);
+    }
+    
+    enemies.forEach(e => { 
+        if (!(e instanceof SpiderBoss) && !(e instanceof DreadnoughtBoss) && !(e instanceof EmperorBoss) && !(e instanceof CrushCoreBoss) && !(e instanceof VoidReaperBoss) && !(e instanceof DeityBoss) && !e.markedForDeletion) { 
+            e.takeDamage(9999);
+        } else if (e.maxHp) {
+            e.takeDamage(e.maxHp * 0.1); 
+        }
+    });
+}
+
+function triggerUpgradeModal() {
+    gameState = 'UPGRADE';
+    if(!player) return;
+    
+    let gunStat = player.weaponLevel < 5 ? `+ Projectiles & Spread` : `MAX LEVEL`;
+    let misStat = player.missileLevel < 5 ? `+2 Homing Missiles` : `MAX LEVEL`;
+    let orbStat = player.orbitalLevel < 5 ? `+ Blast Radius` : `MAX LEVEL`;
+    let chrStat = player.chronoLevel < 5 ? `+ Duration` : `MAX LEVEL`;
+    let droneStat = player.companionLevel < 5 ? `+ Fire Rate & Projectiles` : `MAX LEVEL`;
+    
+    let html = `
+        <h3 style="color:#00ff00;">SYSTEM UPGRADE AVAILABLE</h3>
+        <p>Select a ship system to permanently enhance:</p>
+        <button class="upgrade-btn" onclick="applyUpgrade('gun')" style="--btn-color:#0ff;">MAIN GUN [LVL ${player.weaponLevel}/5]<br><small>${gunStat}</small></button>
+        <button class="upgrade-btn" onclick="applyUpgrade('missile')" style="--btn-color:#0ff;">MISSILES [LVL ${player.missileLevel}/5]<br><small>${misStat}</small></button>
+        <button class="upgrade-btn" onclick="applyUpgrade('orbital')" style="--btn-color:#ffaa00;">ORBITAL STRIKE [LVL ${player.orbitalLevel}/5]<br><small>${orbStat}</small></button>
+        <button class="upgrade-btn" onclick="applyUpgrade('chrono')" style="--btn-color:#00ffff;">CHRONO-SHIFT [LVL ${player.chronoLevel}/5]<br><small>${chrStat}</small></button>
+        <button class="upgrade-btn" onclick="applyUpgrade('health')" style="--btn-color:#00ff00;">HULL REPAIR<br><small>Restore 50 HP (Current: ${Math.floor(player.hp)}/${player.maxHp})</small></button>
+    `;
+    
+    if (player.companionUnlocked) {
+        html += `<button class="upgrade-btn" style="--btn-color:#ffd700;" onclick="applyUpgrade('companion')">WINGMAN DRONE [LVL ${player.companionLevel}/5]<br><small>${droneStat}</small></button>`;
+    }
+    
+    document.getElementById('upgrade-modal-content').innerHTML = html;
+    document.getElementById('upgrade-modal').style.display = 'block';
+}
+
+window.applyUpgrade = function(type) {
+    document.getElementById('upgrade-modal').style.display = 'none';
+    if (!player) return;
+    
+    let msg = "";
+    if (type === 'gun' && player.weaponLevel < 5) { player.weaponLevel++; msg = "MAIN GUN UPGRADED!"; }
+    else if (type === 'missile' && player.missileLevel < 5) { player.missileLevel++; msg = "MISSILES UPGRADED!"; }
+    else if (type === 'orbital' && player.orbitalLevel < 5) { player.orbitalLevel++; msg = "ORBITAL STRIKE UPGRADED!"; }
+    else if (type === 'chrono' && player.chronoLevel < 5) { player.chronoLevel++; msg = "CHRONO-SHIFT UPGRADED!"; }
+    else if (type === 'companion' && player.companionLevel < 5) { player.companionLevel++; msg = "WINGMAN UPGRADED!"; }
+    else if (type === 'health') { 
+        player.hp = Math.min(player.maxHp, player.hp + 50);
+        updateHealthUI();
+        msg = "HULL REPAIRED!"; 
+    }
+    else {
+        score += 1000;
+        msg = "MAX LEVEL - +1000 SCORE";
+    }
+    
+    spawnFloatingText(player.x, player.y - 30, msg, '#00ff00');
+    
+    if (currentQuestionContext === 'refuel') {
+        checkRefuelContinuation();
+    } else {
+        gameState = 'PLAYING';
+    }
+}
+
+function checkRefuelContinuation() {
+    if (refuelQuestionsAsked < 3) {
+        triggerQuestionModal('refuel');
+    } else { 
+        triggerCommLinkModal();
+    }
+}
+
+function triggerCommLinkModal() {
+    gameState = 'QUESTION'; 
+    isPostFightComm = false;
+    
+    let d = preFightComm[sector];
+    document.getElementById('comm-title').innerText = d.title;
+    document.getElementById('comm-title').style.color = d.color;
+    document.getElementById('comm-dialogue').innerText = d.intro;
+    document.getElementById('comm-dialogue').style.color = d.color;
+    
+    let portrait = document.querySelector('.portrait-alien');
+    portrait.style.background = `radial-gradient(circle at 35% 40%, ${d.color} 5px, transparent 6px), radial-gradient(circle at 65% 40%, ${d.color} 5px, transparent 6px), polygon(50% 20%, 80% 80%, 50% 90%, 20% 80%)`;
+    portrait.style.backgroundColor = d.bg;
+
+    let optionsDiv = document.getElementById('comm-options');
+    optionsDiv.innerHTML = '<p style="color:#fff; margin-bottom: 10px; font-size:16px;">SELECT YOUR ATTITUDE:</p>';
+    
+    for (let path in d.options) {
+        let btn = document.createElement('button');
+        btn.className = 'ans-btn';
+        btn.style.setProperty('--btn-color', d.options[path].color);
+        btn.innerText = d.options[path].label;
+        btn.onclick = () => handleCommResponse(path, d.options[path]);
+        optionsDiv.appendChild(btn);
+    }
+    
+    optionsDiv.style.display = 'block';
+    document.getElementById('comm-continue').style.display = 'none';
+    document.getElementById('comm-link-modal').style.display = 'block';
+}
+
+function triggerPostBossCommModal() {
+    gameState = 'QUESTION'; 
+    isPostFightComm = true;
+    
+    let d = postFightComm[sector];
+    if (!d) {
+        finishPostBossComm();
+        return;
+    }
+
+    document.getElementById('comm-title').innerText = d.title;
+    document.getElementById('comm-title').style.color = d.color;
+    document.getElementById('comm-dialogue').innerText = d.intro;
+    document.getElementById('comm-dialogue').style.color = d.color;
+    
+    let optionsDiv = document.getElementById('comm-options');
+    optionsDiv.innerHTML = '<p style="color:#fff; margin-bottom: 10px; font-size:16px;">SELECT FINAL WORDS:</p>';
+    
+    for (let path in d.options) {
+        let btn = document.createElement('button');
+        btn.className = 'ans-btn';
+        btn.style.setProperty('--btn-color', d.options[path].color);
+        btn.innerText = d.options[path].label;
+        btn.onclick = () => handleCommResponse(path, d.options[path]);
+        optionsDiv.appendChild(btn);
+    }
+    
+    optionsDiv.style.display = 'block';
+    
+    let contBtn = document.getElementById('comm-continue-btn');
+    contBtn.innerText = "CONTINUE";
+    contBtn.onclick = finishPostBossComm;
+    
+    document.getElementById('comm-continue').style.display = 'none';
+    document.getElementById('comm-link-modal').style.display = 'block';
+}
+
+function handleCommResponse(path, pathData) {
+    document.getElementById('comm-options').style.display = 'none';
+    document.getElementById('comm-dialogue').innerText = pathData.bossReply;
+    
+    let contBtn = document.getElementById('comm-continue-btn');
+    
+    if (!isPostFightComm) {
+        bossModifier = path;
+        document.getElementById('comm-title').innerText += pathData.titleSuffix || "";
+        
+        contBtn.innerText = "ENGAGE ENEMY";
+        contBtn.onclick = startBossEngagement;
+    } else {
+        contBtn.onclick = finishPostBossComm;
+    }
+    
+    document.getElementById('comm-continue').style.display = 'block';
+}
+
+function startBossEngagement() {
+    document.getElementById('comm-link-modal').style.display = 'none';
+    
+    // Refresh Chrono ability specifically for Boss Fights
+    if (player) {
+        player.chronoActive = 0;
+        player.chronoCooldown = 0;
+        updateChronoUI();
+    }
+
+    if (sector === 1) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, "COMMANDER ARACHNIS ENGAGED", '#ff0044');
+        enemies.push(new SpiderBoss(bossModifier));
+    } else if (sector === 2) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, "GENERAL VANE ENGAGED", '#ff8800');
+        enemies.push(new DreadnoughtBoss(bossModifier));
+    } else if (sector === 3) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, "OVERLORD XAL'KORIS ENGAGED", '#ff00ff');
+        enemies.push(new EmperorBoss(bossModifier));
+    } else if (sector === 4) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, "CRUSH-CORE ENGAGED", '#ffaa00');
+        enemies.push(new CrushCoreBoss(bossModifier));
+    } else if (sector === 5) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, "THE VOID-REAPER ENGAGED", '#8a2be2');
+        enemies.push(new VoidReaperBoss(bossModifier));
+    } else if (sector === 6) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, "OBLIVION ENGAGED", '#ffffff');
+        enemies.push(new DeityBoss(bossModifier));
+    }
+    
+    gameState = 'PLAYING';
+}
+
+function finishPostBossComm() {
+    document.getElementById('comm-link-modal').style.display = 'none';
+    if (sector < 5) {
+        triggerBossRewardModal();
+    } else if (sector === 5) {
+        startNextSector();
+    } else {
+        triggerVictory();
+    }
+}
+
+function triggerBossRewardModal() {
+    gameState = 'REWARD';
+    let optionsHtml = '';
+    
+    let isSavage = (bossModifier === 'disrespectful');
+    let savageTag = isSavage ? "<br><span style='color:#ff00ff; font-weight:bold;'>SAVAGE BONUS!</span>" : "";
+    let hpBoost = isSavage ? 60 : 50;
+    let speedBoost = isSavage ? 4 : 3;
+    let dmgBoost = isSavage ? "+60%" : "+50%";
+    let rofBoost = isSavage ? "+40%" : "+30%";
+    
+    if (sector === 1) {
+        optionsHtml = `
+            <button class="upgrade-btn" onclick="selectBossReward('drone')" style="width: 45%; --btn-color:#00ff00;">WINGMAN DRONE<br><small>Companion Ship${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('nanite')" style="width: 45%; --btn-color:#ff00ff;">NANITE HULL<br><small>Passive HP Regen${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('armor')" style="width: 45%; --btn-color:#aaaaaa;">HEAVY PLATING<br><small>+${hpBoost} Max HP & Full Heal${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('thruster')" style="width: 45%; --btn-color:#ffaa00;">PLASMA THRUSTERS<br><small>+${speedBoost} Movement Speed${savageTag}</small></button>
+        `;
+    } else if (sector === 2) {
+        optionsHtml = `
+            <button class="upgrade-btn" onclick="selectBossReward('dash')" style="width: 45%; --btn-color:#0ff;">QUANTUM DASH<br><small>Press SHIFT to Evade${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('antimatter')" style="width: 45%; --btn-color:#ff0044;">ANTIMATTER WARHEADS<br><small>${dmgBoost} Weapon Damage${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('magnet')" style="width: 45%; --btn-color:#00aaff;">MAGNETIC SCOOP<br><small>Draws Powerups To You${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('overclock')" style="width: 45%; --btn-color:#ffff00;">OVERCHARGE CAPACITOR<br><small>${rofBoost} Fire Rate${savageTag}</small></button>
+        `;
+    } else if (sector === 3) {
+        optionsHtml = `
+            <button class="upgrade-btn" onclick="selectBossReward('chrono-regen')" style="width: 45%; --btn-color:#00ffff;">TIME CRYSTAL<br><small>-30% Chrono Cooldown${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('titanium')" style="width: 45%; --btn-color:#ffffff;">TITANIUM PLATING<br><small>+100 Max HP${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('drone-swarm')" style="width: 45%; --btn-color:#00ff00;">SWARM PROTOCOL<br><small>Wingman Fires Faster${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('pierce')" style="width: 45%; --btn-color:#ff00ff;">PHASE ROUNDS<br><small>Damage Multiplier Buff${savageTag}</small></button>
+        `;
+    } else if (sector === 4) {
+        optionsHtml = `
+            <button class="upgrade-btn" onclick="selectBossReward('vampire')" style="width: 45%; --btn-color:#ff0000;">VAMPIRE CORE<br><small>Restore HP on Kills${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('god-speed')" style="width: 45%; --btn-color:#ffaa00;">LIGHTSPEED DRIVE<br><small>+5 Speed${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('omega-cannon')" style="width: 45%; --btn-color:#ff3333;">OMEGA CANNON<br><small>x2.0 Damage Multiplier${savageTag}</small></button>
+            <button class="upgrade-btn" onclick="selectBossReward('orbital-max')" style="width: 45%; --btn-color:#ffff00;">ORBITAL SATELLITE<br><small>Max Level Orbital Strikes${savageTag}</small></button>
+        `;
+    }
+    
+    document.getElementById('boss-reward-options').innerHTML = optionsHtml;
+    document.getElementById('boss-reward-modal').style.display = 'block';
+}
+
+window.selectBossReward = function(type) {
+    document.getElementById('boss-reward-modal').style.display = 'none';
+    if (!player) return;
+    
+    let isSavage = (bossModifier === 'disrespectful');
+    
+    if (type === 'drone') {
+        player.companionUnlocked = true;
+        player.companionLevel = isSavage ? 2 : 1;
+        player.companion = new Companion(player);
+        spawnFloatingText(player.x, player.y, "WINGMAN ACQUIRED", '#00ff00');
+    } else if (type === 'dash') {
+        player.dashUnlocked = true;
+        if (isSavage) player.speed += 1;
+        spawnFloatingText(player.x, player.y, "QUANTUM DASH ONLINE", '#0ff');
+    } else if (type === 'nanite') {
+        player.regenUnlocked = true;
+        if (isSavage) { player.maxHp += 20; player.hp += 20; updateHealthUI(); }
+        spawnFloatingText(player.x, player.y, "NANITES INJECTED", '#ff00ff');
+    } else if (type === 'antimatter') {
+        player.damageMultiplier = isSavage ? 1.6 : 1.5;
+        spawnFloatingText(player.x, player.y, "WEAPONS OVERCHARGED", '#ff0044');
+    } else if (type === 'armor') {
+        player.maxHp += isSavage ? 60 : 50;
+        player.hp = player.maxHp;
+        updateHealthUI();
+        spawnFloatingText(player.x, player.y, "HEAVY PLATING INSTALLED", '#aaaaaa');
+    } else if (type === 'thruster') {
+        player.speed += isSavage ? 4 : 3;
+        spawnFloatingText(player.x, player.y, "THRUSTERS UPGRADED", '#ffaa00');
+    } else if (type === 'magnet') {
+        player.magneticScoop = true;
+        if (isSavage) player.speed += 1;
+        spawnFloatingText(player.x, player.y, "SCOOP ACTIVE", '#00aaff');
+    } else if (type === 'overclock') {
+        player.fireRate = isSavage ? 6 : 7; 
+        spawnFloatingText(player.x, player.y, "SYSTEMS OVERCLOCKED", '#ffff00');
+    } else if (type === 'chrono-regen') { 
+        player.chronoMaxCooldown = isSavage ? 360 : 420; 
+        spawnFloatingText(player.x, player.y, "TIME CRYSTAL ACTIVE", '#00ffff'); 
+    } else if (type === 'titanium') { 
+        player.maxHp += isSavage ? 150 : 100; player.hp = player.maxHp; updateHealthUI(); 
+        spawnFloatingText(player.x, player.y, "TITANIUM PLATING", '#ffffff'); 
+    } else if (type === 'drone-swarm') { 
+        if (player.companionUnlocked) player.companionLevel = 5; 
+        else { player.companionUnlocked = true; player.companionLevel = 3; player.companion = new Companion(player); } 
+        spawnFloatingText(player.x, player.y, "SWARM PROTOCOL", '#00ff00'); 
+    } else if (type === 'pierce') { 
+        player.damageMultiplier += isSavage ? 0.6 : 0.4; 
+        spawnFloatingText(player.x, player.y, "PHASE ROUNDS", '#ff00ff'); 
+    } else if (type === 'vampire') { 
+        player.vampireUnlocked = true; 
+        player.damageMultiplier += 0.2; 
+        spawnFloatingText(player.x, player.y, "VAMPIRE CORE", '#ff0000'); 
+    } else if (type === 'god-speed') { 
+        player.speed += isSavage ? 6 : 5; 
+        spawnFloatingText(player.x, player.y, "LIGHTSPEED DRIVE", '#ffaa00'); 
+    } else if (type === 'omega-cannon') { 
+        player.damageMultiplier = isSavage ? 2.5 : 2.0; 
+        spawnFloatingText(player.x, player.y, "OMEGA CANNON", '#ff3333'); 
+    } else if (type === 'orbital-max') { 
+        player.orbitalLevel = 5; 
+        spawnFloatingText(player.x, player.y, "ORBITAL SATELLITE", '#ffff00'); 
+    }
+    
+    startNextSector();
+}
+
+function startNextSector() {
+    sector++;
+    wave = 1;
+    frameCount = 0; 
+    enemies = []; 
+    bullets = [];
+    powerups = [];
+    floatingTexts = [];
+    orbitalStrikes = [];
+    
+    if (player) {
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 100;
+    }
+    
+    if (sector === 6) {
+        spawnFloatingText(canvas.width/2, canvas.height/2, `ENTERING THE VOID`, '#ffffff');
+        waveDisplay.innerText = `SECTOR: UNKNOWN | THE DEITY`;
+        gameState = 'PLAYING';
+    } else {
+        spawnFloatingText(canvas.width/2, canvas.height/2, `ENTERING SECTOR ${sector}`, '#0ff');
+        waveDisplay.innerText = `SECTOR: ${sector} | WAVE: ${wave}`;
+        gameState = 'PLAYING';
+    }
+}
+
+function checkCollisions() {
+    const GRID_SIZE = 200;
+    const grid = {};
+
+    enemies.forEach(e => {
+        if (e.markedForDeletion) return;
+        const cellX = Math.floor(e.x / GRID_SIZE);
+        const cellY = Math.floor(e.y / GRID_SIZE);
+        const key = `${cellX},${cellY}`;
+        if (!grid[key]) grid[key] = [];
+        grid[key].push(e);
+    });
+
+    for (let i = 0; i < bullets.length; i++) {
+        let b = bullets[i];
+        if (b.markedForDeletion) continue;
+
+        if (b.isPlayer) {
+            const cellX = Math.floor(b.x / GRID_SIZE);
+            const cellY = Math.floor(b.y / GRID_SIZE);
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const key = `${cellX + dx},${cellY + dy}`;
+                    const cellEnemies = grid[key];
+                    if (!cellEnemies) continue;
+                    for (let e of cellEnemies) {
+                        if (e.isInvincible) continue;
+                        const totalRadius = b.radius + e.radius;
+                        if (MathUtils.distanceSq(b.x, b.y, e.x, e.y) < totalRadius * totalRadius) {
+                            e.takeDamage(b.damage);
+                            b.markedForDeletion = true;
+                            break; 
+                        }
+                    }
+                    if(b.markedForDeletion) break;
+                }
+                if(b.markedForDeletion) break;
+            }
+        } else {
+            if (!player) continue;
+            const totalRadius = b.radius + player.radius;
+            if (MathUtils.distanceSq(b.x, b.y, player.x, player.y) < totalRadius * totalRadius) {
+                player.takeDamage(b.damage);
+                b.markedForDeletion = true;
+            }
+        }
+    }
+
+    if (player) {
+        enemies.forEach(e => {
+            if (e.markedForDeletion || e.isInvincible) return;
+            const totalRadius = player.radius + e.radius;
+            if (MathUtils.distanceSq(player.x, player.y, e.x, e.y) < totalRadius * totalRadius) {
+                player.takeDamage(20);
+                e.takeDamage(50);
+            }
+        });
+
+        powerups.forEach(p => {
+            if (p.markedForDeletion) return;
+            const totalRadius = player.radius + p.radius;
+            if (MathUtils.distanceSq(player.x, player.y, p.x, p.y) < totalRadius * totalRadius) {
+                applyPowerUp(p.type);
+                p.markedForDeletion = true;
+            }
+        });
+    }
+}
+
+function spawnManager() {
+    if (sector === 6) {
+        if (frameCount === 60) {
+            waveDisplay.innerText = `THE VOID | FINAL BATTLE`;
+            triggerCommLinkModal();
+        }
+        return; // No normal waves in the Void
+    }
+
+    let wavesInSector = sector === 4 || sector === 5 ? 5 : sector + 2; 
+    let waveDuration = 1800; 
+    let waveTimer = frameCount % waveDuration;
+
+    if (waveTimer === 0 && wave < wavesInSector && frameCount > 0) {
+        if (player) {
+            player.chronoActive = 0;
+            player.chronoCooldown = 0;
+            updateChronoUI();
+        }
+        
+        if (wave === wavesInSector - 1) { 
+            wave++; 
+            waveDisplay.innerText = `SECTOR: ${sector} | WAVE: BOSS`;
+            enemies = [];
+            bullets = [];
+            triggerBossChoiceModal(); 
+        }
+        else { 
+            triggerQuestionModal('intermission'); 
+            wave++; 
+            waveDisplay.innerText = `SECTOR: ${sector} | WAVE: ${wave}`;
+        }
+    }
+    
+    // NEW GRACE PERIOD LOGIC: Do not spawn anything for the first 120 frames (2 seconds) of a wave
+    if (waveTimer < 120) return;
+    
+    if (wave < wavesInSector) {
+        // Progressive difficulty: Steeper intensity scaling
+        let intensity = (sector * 1.2) + (wave * 0.6);
+
+        if (sector === 1) {
+            let droneFreq = Math.max(15, Math.floor(82 - (intensity * 12)));
+            if (frameCount % droneFreq === 0) enemies.push(new Drone(MathUtils.rand(50, canvas.width-50), -30));
+            
+            let cruiserFreq = Math.max(120, Math.floor(400 - (intensity * 40)));
+            if (frameCount % cruiserFreq === 0) enemies.push(new Cruiser(MathUtils.rand(100, canvas.width-100), -50));
+            
+        } else if (sector === 2) {
+            let intFreq = Math.max(50, Math.floor(270 - (intensity * 30)));
+            if (frameCount % intFreq === 0) enemies.push(new Interceptor(MathUtils.rand(50, canvas.width-50), -30));
+            
+            let cruiserFreq = Math.max(100, Math.floor(360 - (intensity * 40)));
+            if (frameCount % cruiserFreq === 0) enemies.push(new Cruiser(MathUtils.rand(100, canvas.width-100), -50));
+            
+        } else if (sector === 3) {
+            let intFreq = Math.max(40, Math.floor(220 - (intensity * 30)));
+            if (frameCount % intFreq === 0) enemies.push(new Interceptor(MathUtils.rand(50, canvas.width-50), -30));
+
+            let juggFreq = Math.max(150, Math.floor(550 - (intensity * 50)));
+            if (frameCount % juggFreq === 0) enemies.push(new Juggernaut(MathUtils.rand(100, canvas.width-100), -50));
+
+        } else if (sector === 4) {
+            let astFreq = Math.max(30, Math.floor(130 - (intensity * 15)));
+            if (frameCount % astFreq === 0) enemies.push(new Asteroid(MathUtils.rand(50, canvas.width-50), -50, MathUtils.rand(20, 50), MathUtils.rand(1, 3)));
+            
+            let mineFreq = Math.max(90, Math.floor(260 - (intensity * 25)));
+            if (frameCount % mineFreq === 0) enemies.push(new MineLayer(MathUtils.rand(100, canvas.width-100), -30));
+            
+        } else if (sector === 5) {
+            let phaseFreq = Math.max(60, Math.floor(180 - (intensity * 25)));
+            if (frameCount % phaseFreq === 0) enemies.push(new PhaseShifter(MathUtils.rand(50, canvas.width-50), -30));
+            
+            let juggFreq = Math.max(120, Math.floor(350 - (intensity * 45)));
+            if (frameCount % juggFreq === 0) enemies.push(new Juggernaut(MathUtils.rand(100, canvas.width-100), -50));
+        }
+
+        if (waveTimer === 900) enemies.push(new QuestionDrone(MathUtils.rand(100, canvas.width-100), -50));
+        
+        // Random global powerups during normal waves
+        if (frameCount % 240 === 0 && Math.random() < 0.4) {
+            powerups.push(new PowerUp(MathUtils.rand(50, canvas.width - 50), -30));
+        }
+        
+    } else if (wave === wavesInSector) {
+        // Random global powerups during boss battles
+        if (frameCount % 180 === 0 && Math.random() < 0.5) {
+            powerups.push(new PowerUp(MathUtils.rand(50, canvas.width - 50), -30));
+        }
+    }
+}
+
+function update(dt) {
+    if (gameState === 'PAUSED') return;
+    if (gameState !== 'PLAYING') return;
+    if (!player) return; 
+    
+    rawFrameCount++;
+    
+    // Chrono-Shift Activation
+    if (input.keys['Space'] && player.chronoCooldown <= 0 && player.chronoActive <= 0) {
+        let durationSeconds = 3 + player.chronoLevel;
+        player.chronoActive = durationSeconds * 60; 
+        player.chronoMaxCooldown = 600; 
+        player.chronoCooldown = player.chronoMaxCooldown;
+        updateChronoUI();
+        spawnFloatingText(player.x, player.y - 40, "CHRONO-SHIFT!", '#00ffff');
+    }
+    
+    if (player.chronoActive > 0) {
+        player.chronoActive--;
+        if (player.chronoActive === 0) spawnFloatingText(player.x, player.y - 40, "TIME NORMALIZED", '#ffffff');
+        updateChronoUI(); 
+        if (rawFrameCount % 3 !== 0) return; // Time dilation frame skip
+    } else {
+        if (player.chronoCooldown > 0) {
+            player.chronoCooldown--;
+            updateChronoUI(); 
+        }
+    }
+
+    frameCount++; 
+    bg.update(); 
+    player.update(); 
+    spawnManager();
+    bullets.forEach(b => b.update());
+    enemies.forEach(e => e.update());
+    particles.forEach(p => p.update());
+    powerups.forEach(p => p.update());
+    orbitalStrikes.forEach(o => o.update());
+    
+    checkCollisions();
+    
+    for (let i = bullets.length - 1; i >= 0; i--) { if (bullets[i].markedForDeletion) bullets.splice(i, 1); }
+    for (let i = enemies.length - 1; i >= 0; i--) { if (enemies[i].markedForDeletion) enemies.splice(i, 1); }
+    for (let i = particles.length - 1; i >= 0; i--) { if (particles[i].markedForDeletion) particles.splice(i, 1); }
+    for (let i = powerups.length - 1; i >= 0; i--) { if (powerups[i].markedForDeletion) powerups.splice(i, 1); }
+    for (let i = orbitalStrikes.length - 1; i >= 0; i--) { if (orbitalStrikes[i].markedForDeletion) orbitalStrikes.splice(i, 1); }
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        floatingTexts[i].y -= 1;
+        floatingTexts[i].life--;
+        if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+    }
+}
+
+function draw() {
+    ctx.save();
+    if (screenShake > 0) {
+        let dx = MathUtils.rand(-screenShake, screenShake);
+        let dy = MathUtils.rand(-screenShake, screenShake);
+        ctx.translate(dx, dy);
+        screenShake *= 0.9;
+        if (screenShake < 0.5) screenShake = 0;
+    }
+
+    bg.draw(ctx);
+    
+    if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+        if (!player) { ctx.restore(); return; }
+        
+        // Draw Chrono-Shift visual effect under everything
+        if (player.chronoActive > 0) {
+            ctx.save();
+            let alpha = 0.15 + Math.sin(rawFrameCount * 0.1) * 0.05;
+            ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            let grad = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height/4, canvas.width/2, canvas.height/2, canvas.width);
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(1, 'rgba(0, 150, 255, 0.4)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+        }
+
+        orbitalStrikes.forEach(o => o.draw(ctx));
+        powerups.forEach(p => p.draw(ctx));
+        bullets.forEach(b => b.draw(ctx));
+        enemies.forEach(e => e.draw(ctx));
+        if (player.companionUnlocked && player.companion) player.companion.draw(ctx);
+        player.draw(ctx);
+        particles.forEach(p => p.draw(ctx));
+        ctx.textAlign = 'center'; ctx.font = 'bold 20px Courier New';
+        floatingTexts.forEach(ft => {
+            ctx.save(); ctx.globalAlpha = ft.life / ft.maxLife; ctx.fillStyle = ft.color;
+            ctx.fillText(ft.text, ft.x, ft.y); ctx.restore();
+        });
+    }
+    
+    ctx.restore();
+
+    if (flashAlpha > 0) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        flashAlpha -= 0.05;
+    }
+    
+    if (gameState === 'PAUSED') {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#0ff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 50px Courier New';
+        ctx.fillText("PAUSED", canvas.width/2, canvas.height/2);
+        ctx.font = 'bold 20px Courier New';
+        ctx.fillStyle = '#fff';
+        ctx.fillText("Press P or ESC to Resume", canvas.width/2, canvas.height/2 + 40);
+    }
+}
+
+function loop(timestamp) {
+    update(); draw();
+    requestAnimationFrame(loop);
+}
+
+function initGame() {
+    player = new Player(); 
+    bullets = []; enemies = []; particles = []; powerups = []; floatingTexts = []; orbitalStrikes = [];
+    score = 0; wave = 1; sector = 1; frameCount = 0; rawFrameCount = 0; lives = 5;
+    availableQuestions = []; 
+    bossModifier = 'normal';
+    screenShake = 0; flashAlpha = 0;
+    
+    player.shieldActive = true;
+    player.shieldHp = 200;
+    
+    updateHealthUI(); 
+    updateChronoUI();
+    bossHealthContainer.style.display = 'none'; 
+    uiLayer.style.display = 'block';
+    startScreen.style.display = 'none'; 
+    gameOverScreen.style.display = 'none'; 
+    victoryScreen.style.display = 'none';
+    
+    waveDisplay.innerText = `SECTOR: 1 | WAVE: 1`;
+    document.getElementById('lives-display').innerText = `LIVES: 5`;
+    scoreDisplay.innerText = `SCORE: 0`;
+    
+    input.x = canvas.width / 2; input.y = canvas.height - 100; 
+    gameState = 'PLAYING';
+    
+    spawnFloatingText(player.x, player.y - 40, "HEAVY SHIELDS ACTIVE", 'gold');
+}
+
+function restartSector() {
+    bullets = []; enemies = []; particles = []; powerups = []; floatingTexts = []; orbitalStrikes = [];
+    wave = 1; frameCount = 0; rawFrameCount = 0; lives = 5;
+    bossModifier = 'normal';
+    screenShake = 0; flashAlpha = 0;
+    
+    player.weaponLevel = Math.max(1, Math.ceil(player.weaponLevel / 2));
+    player.missileLevel = Math.floor(player.missileLevel / 2);
+    player.orbitalLevel = Math.floor(player.orbitalLevel / 2);
+    player.chronoLevel = Math.max(1, Math.ceil(player.chronoLevel / 2));
+    if (player.companionUnlocked) {
+        player.companionLevel = Math.max(1, Math.ceil(player.companionLevel / 2));
+    }
+    
+    player.x = canvas.width / 2; 
+    player.y = canvas.height - 100; 
+    player.hp = player.maxHp;
+    player.activeBuffs = { orbital: 0, missile: 0, weapon: 0 };
+    player.dashActive = 0;
+    player.chronoActive = 0;
+    player.chronoCooldown = 0;
+    player.chronoMaxCooldown = 600;
+    
+    player.shieldActive = true;
+    player.shieldHp = 200;
+    
+    updateHealthUI(); 
+    updateChronoUI();
+    bossHealthContainer.style.display = 'none'; 
+    uiLayer.style.display = 'block';
+    gameOverScreen.style.display = 'none'; 
+    
+    if (sector === 6) {
+        waveDisplay.innerText = `THE VOID | FINAL BATTLE`;
+    } else {
+        waveDisplay.innerText = `SECTOR: ${sector} | WAVE: 1`;
+    }
+    
+    document.getElementById('lives-display').innerText = `LIVES: 5`;
+    
+    input.x = canvas.width / 2; input.y = canvas.height - 100; 
+    gameState = 'PLAYING';
+    
+    spawnFloatingText(canvas.width/2, canvas.height/2, "SYSTEMS COMPROMISED: UPGRADES LOST", '#ff0000');
+    spawnFloatingText(player.x, player.y - 40, "EMERGENCY SHIELDS ACTIVE", 'gold');
+}
+
+document.getElementById('start-btn').addEventListener('click', initGame);
+document.getElementById('restart-btn').addEventListener('click', restartSector);
+document.getElementById('victory-btn').addEventListener('click', initGame);
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
