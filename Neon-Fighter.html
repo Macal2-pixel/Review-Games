@@ -1251,7 +1251,7 @@ class Enemy {
 
 class Drone extends Enemy {
     constructor(x, y) {
-        super(x, y, 20 + (sector*10), 15, 100);
+        super(x, y, 25 + (sector*10), 15, 100);
         this.vx = MathUtils.rand(-1.5, 1.5); this.vy = MathUtils.rand(1.5, 3);
     }
     getColor() { return '#39FF14'; }
@@ -1274,7 +1274,7 @@ class Drone extends Enemy {
 
 class Interceptor extends Enemy {
     constructor(x, y) {
-        super(x, y, 80 + (sector*30), 18, 200);
+        super(x, y, 90 + (sector*30), 18, 200);
         this.vx = MathUtils.rand(-3, 3);
         this.vy = 4 + (sector * 0.5); 
     }
@@ -1299,7 +1299,7 @@ class Interceptor extends Enemy {
 
 class Juggernaut extends Enemy {
     constructor(x, y) {
-        super(x, y, 600 + (sector*200), 35, 800);
+        super(x, y, 650 + (sector*200), 35, 800);
         this.vy = 1;
         this.targetY = MathUtils.rand(100, 300);
     }
@@ -1330,7 +1330,7 @@ class Juggernaut extends Enemy {
 
 class QuestionDrone extends Enemy {
     constructor(x, y) {
-        super(x, y, 150, 20, 500);
+        super(x, y, 165, 20, 500);
         this.vx = MathUtils.rand(-1, 1) > 0 ? 1.5 : -1.5; this.vy = 1;
         this.startX = x;
     }
@@ -1355,7 +1355,7 @@ class QuestionDrone extends Enemy {
 
 class Cruiser extends Enemy {
     constructor(x, y) {
-        super(x, y, 100 + (sector*25), 25, 500); this.vy = 1.0;
+        super(x, y, 115 + (sector*25), 25, 500); this.vy = 1.0;
     }
     getColor() { return '#ff3300'; }
     update() {
@@ -1405,7 +1405,7 @@ class Mine extends Enemy {
 
 class MineLayer extends Enemy {
     constructor(x, y) {
-        super(x, y, 150 + (sector*20), 20, 300);
+        super(x, y, 165 + (sector*20), 20, 300);
         this.vx = MathUtils.rand(-2, 2); this.vy = 1;
     }
     getColor() { return '#ffff00'; }
@@ -1430,7 +1430,7 @@ class MineLayer extends Enemy {
 
 class Asteroid extends Enemy {
     constructor(x, y, radius, generation) {
-        super(x, y, 100 * generation, radius, 50 * generation);
+        super(x, y, 115 * generation, radius, 50 * generation);
         this.generation = generation;
         this.vx = MathUtils.rand(-1.5, 1.5);
         this.vy = MathUtils.rand(1, 2.5);
@@ -1473,7 +1473,7 @@ class Asteroid extends Enemy {
 
 class PhaseShifter extends Enemy {
     constructor(x, y) {
-        super(x, y, 120 + (sector*20), 15, 300);
+        super(x, y, 135 + (sector*20), 15, 300);
         this.vx = MathUtils.rand(-2, 2); this.vy = 1.5;
     }
     getColor() { return '#ffffff'; }
@@ -2683,45 +2683,43 @@ function spawnManager() {
     if (waveTimer < 120) return;
     
     if (wave < wavesInSector) {
-        // Progressive difficulty: Steeper intensity scaling
-        let intensity = (sector * 1.2) + (wave * 0.6);
+        // Progressive difficulty: Scales up the base intensity slightly faster
+        let intensity = (sector * 1.35) + ((wave - 1) * 0.4);
 
-        if (sector === 1) {
-            let droneFreq = Math.max(15, Math.floor(82 - (intensity * 12)));
+        // Cumulative Spawning: Older enemies continue to spawn in later sectors!
+        
+        if (sector >= 1) {
+            let droneFreq = Math.max(20, Math.floor(80 - (intensity * 8)));
             if (frameCount % droneFreq === 0) enemies.push(new Drone(MathUtils.rand(50, canvas.width-50), -30));
             
-            let cruiserFreq = Math.max(120, Math.floor(400 - (intensity * 40)));
+            let cruiserFreq = Math.max(120, Math.floor(380 - (intensity * 30)));
             if (frameCount % cruiserFreq === 0) enemies.push(new Cruiser(MathUtils.rand(100, canvas.width-100), -50));
-            
-        } else if (sector === 2) {
-            let intFreq = Math.max(50, Math.floor(270 - (intensity * 30)));
+        } 
+        
+        if (sector >= 2) {
+            let intFreq = Math.max(50, Math.floor(250 - (intensity * 20)));
             if (frameCount % intFreq === 0) enemies.push(new Interceptor(MathUtils.rand(50, canvas.width-50), -30));
-            
-            let cruiserFreq = Math.max(100, Math.floor(360 - (intensity * 40)));
-            if (frameCount % cruiserFreq === 0) enemies.push(new Cruiser(MathUtils.rand(100, canvas.width-100), -50));
-            
-        } else if (sector === 3) {
-            let intFreq = Math.max(40, Math.floor(220 - (intensity * 30)));
-            if (frameCount % intFreq === 0) enemies.push(new Interceptor(MathUtils.rand(50, canvas.width-50), -30));
-
-            let juggFreq = Math.max(150, Math.floor(550 - (intensity * 50)));
+        } 
+        
+        if (sector >= 3) {
+            let juggFreq = Math.max(150, Math.floor(540 - (intensity * 40)));
             if (frameCount % juggFreq === 0) enemies.push(new Juggernaut(MathUtils.rand(100, canvas.width-100), -50));
-
-        } else if (sector === 4) {
-            let astFreq = Math.max(30, Math.floor(130 - (intensity * 15)));
+        } 
+        
+        if (sector >= 4) {
+            let astFreq = Math.max(35, Math.floor(135 - (intensity * 10)));
             if (frameCount % astFreq === 0) enemies.push(new Asteroid(MathUtils.rand(50, canvas.width-50), -50, MathUtils.rand(20, 50), MathUtils.rand(1, 3)));
             
-            let mineFreq = Math.max(90, Math.floor(260 - (intensity * 25)));
+            let mineFreq = Math.max(90, Math.floor(270 - (intensity * 20)));
             if (frameCount % mineFreq === 0) enemies.push(new MineLayer(MathUtils.rand(100, canvas.width-100), -30));
-            
-        } else if (sector === 5) {
-            let phaseFreq = Math.max(60, Math.floor(180 - (intensity * 25)));
+        } 
+        
+        if (sector >= 5) {
+            let phaseFreq = Math.max(60, Math.floor(180 - (intensity * 15)));
             if (frameCount % phaseFreq === 0) enemies.push(new PhaseShifter(MathUtils.rand(50, canvas.width-50), -30));
-            
-            let juggFreq = Math.max(120, Math.floor(350 - (intensity * 45)));
-            if (frameCount % juggFreq === 0) enemies.push(new Juggernaut(MathUtils.rand(100, canvas.width-100), -50));
         }
 
+        // Special Events
         if (waveTimer === 900) enemies.push(new QuestionDrone(MathUtils.rand(100, canvas.width-100), -50));
         
         // Random global powerups during normal waves
@@ -2868,8 +2866,8 @@ function initGame() {
     bossModifier = 'normal';
     screenShake = 0; flashAlpha = 0;
     
-    player.shieldActive = true;
-    player.shieldHp = 200;
+    player.shieldActive = false;
+    player.shieldHp = 0;
     
     updateHealthUI(); 
     updateChronoUI();
@@ -2885,8 +2883,6 @@ function initGame() {
     
     input.x = canvas.width / 2; input.y = canvas.height - 100; 
     gameState = 'PLAYING';
-    
-    spawnFloatingText(player.x, player.y - 40, "HEAVY SHIELDS ACTIVE", 'gold');
 }
 
 function restartSector() {
@@ -2912,8 +2908,8 @@ function restartSector() {
     player.chronoCooldown = 0;
     player.chronoMaxCooldown = 600;
     
-    player.shieldActive = true;
-    player.shieldHp = 200;
+    player.shieldActive = false;
+    player.shieldHp = 0;
     
     updateHealthUI(); 
     updateChronoUI();
@@ -2933,7 +2929,20 @@ function restartSector() {
     gameState = 'PLAYING';
     
     spawnFloatingText(canvas.width/2, canvas.height/2, "SYSTEMS COMPROMISED: UPGRADES LOST", '#ff0000');
-    spawnFloatingText(player.x, player.y - 40, "EMERGENCY SHIELDS ACTIVE", 'gold');
+}
+
+function triggerGameOver() {
+    gameState = 'GAMEOVER';
+    uiLayer.style.display = 'none';
+    gameOverScreen.style.display = 'flex';
+    document.getElementById('final-score').innerText = score;
+}
+
+function triggerVictory() {
+    gameState = 'VICTORY';
+    uiLayer.style.display = 'none';
+    victoryScreen.style.display = 'flex';
+    document.getElementById('victory-score').innerText = score;
 }
 
 document.getElementById('start-btn').addEventListener('click', initGame);
@@ -2942,4 +2951,5 @@ document.getElementById('victory-btn').addEventListener('click', initGame);
 requestAnimationFrame(loop);
 </script>
 </body>
+</html>
 </html>
